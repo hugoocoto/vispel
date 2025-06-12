@@ -129,12 +129,15 @@ typedef struct vlex {
                 char *str_literal;
         };
         int line;
+        intptr_t offset;
         /* Linked list stuff */
         struct vlex *next;
 } vlex;
 
 char *current_ptr = NULL;
 int line = 1;
+char *start_line;
+char *start_offset;
 
 void
 report(char *format, ...)
@@ -160,28 +163,30 @@ add_token(vtoken token, ...)
         tok->line = line;
         tok->token = token;
         tok->lexeme = TOKEN_REPR[token];
+        tok->offset = start_offset - start_line + 1;
+        report("[%2d:%2d] Token: %s", tok->line, tok->offset, TOKEN_REPR[token]);
+
         va_start(v, token);
-        /* TODO */
         switch (token) {
         case STRING:
                 tok->str_literal = va_arg(v, char *);
-                report("Token: %s \"%s\"\n", TOKEN_REPR[token], tok->str_literal);
+                report(" \"%s\"\n", tok->str_literal);
                 break;
         case CHAR:
                 tok->str_literal = va_arg(v, char *);
-                report("Token: %s '%s'\n", TOKEN_REPR[token], tok->str_literal);
+                report(" '%s'\n", tok->str_literal);
                 break;
         case IDENTIFIER:
                 tok->str_literal = va_arg(v, char *);
-                report("Token: %s `%s`\n", TOKEN_REPR[token], tok->str_literal);
+                report(" `%s`\n", tok->str_literal);
                 break;
         case NUMBER:
                 tok->num_literal = va_arg(v, int);
-                report("Token: %s `%d`\n", TOKEN_REPR[token], tok->num_literal);
+                report(" `%d`\n", tok->num_literal);
                 break;
 
         default:
-                report("Token: %s\n", TOKEN_REPR[token]);
+                report("\n");
                 break;
         }
         va_end(v);
@@ -282,9 +287,11 @@ get_comment()
 vlex
 lex_analize(char *source)
 {
-        current_ptr = source;
         char current;
+        current_ptr = source;
+        start_line = current_ptr;
         for (;;) {
+                start_offset = current_ptr;
                 switch (current = get_consume_lex()) {
                 case '(':
                         add_token(LEFT_PARENT);
@@ -400,6 +407,7 @@ lex_analize(char *source)
                         break;
 
                 case '\n':
+                        start_line = current_ptr;
                         ++line;
                         break;
                 case 0:
