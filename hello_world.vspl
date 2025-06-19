@@ -1,0 +1,16 @@
+extern puts;            // External function puts
+
+print={                 // Function print
+        |> s;           // Input argument s
+        |< o;           // Output argument o
+        (puts) s;
+}
+
+hello_ptr = "h__lo";
+[s + 1] = 'e';
+[s + 1 * 2] = 'l';
+
+(print) hello_ptr;      // Call function print with argument hello_ptr
+
+
+

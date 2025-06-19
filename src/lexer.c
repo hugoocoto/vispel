@@ -14,185 +14,115 @@
 #include <string.h>
 #include <unistd.h>
 
-typedef enum {
-        LEFT_PARENT,
-        RIGHT_PARENT,
-        LEFT_BRACE,
-        RIGHT_BRACE,
-        LEFT_BRACKET,
-        RIGHT_BRACKET,
-        COMMA,
-        DOT,
-        MINUS,
-        PLUS,
-        SEMICOLON,
-        SLASH,
-        STAR,
-        BANG,
-        BANG_EQUAL,
-        EQUAL,
-        EQUAL_EQUAL,
-        GREATER,
-        GREATER_EQUAL,
-        LESS,
-        LESS_EQUAL,
-        IDENTIFIER,
-        STRING,
-        NUMBER,
-        AND,
-        CLASS,
-        ELSE,
-        FALSE,
-        FUNCTION,
-        FOR,
-        IF,
-        NIL,
-        OR,
-        EXTERN,
-        RETURN,
-        TRUE,
-        WHILE,
-        END_OF_FILE,
-        BITWISE_AND,
-        BITWISE_OR,
-        BITWISE_XOR,
-        BITWISE_NOT,
-        PLUS_PLUS,
-        LESS_LESS,
-        SHIFT_LEFT,
-        SHIFT_RIGHT,
-        FUNC_INPUT,
-        FUNC_OUTPUT,
-        CHAR,
-        UNKNOWN,
-} vtoken;
+#include "tokens.h"
 
-static const char *TOKEN_REPR[] = {
-        [LEFT_PARENT] = "LEFT_PARENT",
-        [RIGHT_PARENT] = "RIGHT_PARENT",
-        [LEFT_BRACE] = "LEFT_BRACE",
-        [RIGHT_BRACE] = "RIGHT_BRACE",
-        [LEFT_BRACKET] = "LEFT_BRACKET",
-        [RIGHT_BRACKET] = "RIGHT_BRACKET",
-        [COMMA] = "COMMA",
-        [DOT] = "DOT",
-        [MINUS] = "MINUS",
-        [PLUS] = "PLUS",
-        [SEMICOLON] = "SEMICOLON",
-        [SLASH] = "SLASH",
-        [STAR] = "STAR",
-        [BANG] = "BANG",
-        [BANG_EQUAL] = "BANG_EQUAL",
-        [EQUAL] = "EQUAL",
-        [EQUAL_EQUAL] = "EQUAL_EQUAL",
-        [GREATER] = "GREATER",
-        [GREATER_EQUAL] = "GREATER_EQUAL",
-        [LESS] = "LESS",
-        [LESS_EQUAL] = "LESS_EQUAL",
-        [IDENTIFIER] = "IDENTIFIER",
-        [STRING] = "STRING",
-        [NUMBER] = "NUMBER",
-        [AND] = "AND",
-        [CLASS] = "CLASS",
-        [ELSE] = "ELSE",
-        [FALSE] = "FALSE",
-        [FUNCTION] = "FUNCTION",
-        [FOR] = "FOR",
-        [IF] = "IF",
-        [NIL] = "NIL",
-        [OR] = "OR",
-        [EXTERN] = "EXTERN",
-        [RETURN] = "RETURN",
-        [TRUE] = "TRUE",
-        [WHILE] = "WHILE",
-        [END_OF_FILE] = "END_OF_FILE",
-        [BITWISE_AND] = "BITWISE_AND",
-        [BITWISE_OR] = "BITWISE_OR",
-        [BITWISE_XOR] = "BITWISE_XOR",
-        [BITWISE_NOT] = "BITWISE_NOT",
-        [PLUS_PLUS] = "PLUS_PLUS",
-        [LESS_LESS] = "LESS_LESS",
-        [SHIFT_LEFT] = "SHIFT_LEFT",
-        [SHIFT_RIGHT] = "SHIFT_RIGHT",
-        [FUNC_INPUT] = "FUNC_INPUT",
-        [FUNC_OUTPUT] = "FUNC_OUTPUT",
-        [CHAR] = "CHAR",
-        [UNKNOWN] = "UNKNOWN",
-};
-
-typedef struct vlex {
-        vtoken token;
-        const char *lexeme;
-        union {
-                int num_literal;
-                void *mem_literal;
-                char *str_literal;
-        };
-        int line;
-        intptr_t offset;
-        /* Linked list stuff */
-        struct vlex *next;
-} vlex;
-
+/* Location of current char in file buffer */
 char *current_ptr = NULL;
-int line = 1;
+/* Location of current token in source */
 char *start_line;
 char *start_offset;
+int line = 1;
+/* First token of token list */
+vtok *head_token = NULL;
 
 void
-report(char *format, ...)
+print_literal(vtok *tok)
 {
-        va_list args;
-        va_start(args, format);
-        vfprintf(stderr, format, args);
-        va_end(args);
-        FILE *f = fopen("log.txt", "a");
-        if (f) {
-                va_start(args, format);
-                vfprintf(f, format, args);
-                va_end(args);
-                fclose(f);
+        switch (tok->token) {
+        case STRING:
+                printf(" \"%s\"", tok->str_literal);
+                break;
+        case CHAR:
+                printf(" '%s'", tok->str_literal);
+                break;
+        case IDENTIFIER:
+                printf(" `%s`", tok->str_literal);
+                break;
+        case NUMBER:
+                printf(" `%d`", tok->num_literal);
+                break;
+        case TRUE:
+                printf(" `true`");
+                break;
+        case FALSE:
+                printf(" `true`");
+                break;
+        default:
+                break;
         }
 }
 
 void
-add_token(vtoken token, ...)
+print_token(vtok *tok)
 {
-        va_list v;
-        vlex *tok = calloc(1, sizeof *tok);
+        printf("[%2d:%2ld] Token: %s", tok->line, tok->offset, TOKEN_REPR[tok->token]);
+        if (tok->token == STRING ||
+            tok->token == CHAR ||
+            tok->token == IDENTIFIER ||
+            tok->token == NUMBER ||
+            tok->token == TRUE ||
+            tok->token == FALSE) {
+                print_literal(tok);
+        }
+        printf("\n");
+}
+
+void
+print_tokens()
+{
+        vtok *tok = head_token;
+        while (tok) {
+                print_token(tok);
+                tok = tok->next;
+        }
+}
+
+static vtok *
+new_token(vtoktype token)
+{
+        vtok *tok = malloc(sizeof *tok);
         tok->line = line;
         tok->token = token;
         tok->lexeme = TOKEN_REPR[token];
         tok->offset = start_offset - start_line + 1;
-        report("[%2d:%2d] Token: %s", tok->line, tok->offset, TOKEN_REPR[token]);
+        /* Link token */
+        static vtok *prev = NULL;
+        tok->next = NULL;
+        tok->prev = prev;
+        if (prev) prev->next = tok;
+        prev = tok;
+
+        if (head_token == NULL) head_token = tok;
+        return tok;
+}
+
+static void
+add_token(vtoktype token, ...)
+{
+        va_list v;
+        vtok *tok = new_token(token);
 
         va_start(v, token);
         switch (token) {
         case STRING:
                 tok->str_literal = va_arg(v, char *);
-                report(" \"%s\"\n", tok->str_literal);
                 break;
         case CHAR:
                 tok->str_literal = va_arg(v, char *);
-                report(" '%s'\n", tok->str_literal);
                 break;
         case IDENTIFIER:
                 tok->str_literal = va_arg(v, char *);
-                report(" `%s`\n", tok->str_literal);
                 break;
         case NUMBER:
                 tok->num_literal = va_arg(v, int);
-                report(" `%d`\n", tok->num_literal);
                 break;
-
         default:
-                report("\n");
                 break;
         }
         va_end(v);
 }
 
-bool
+static bool
 match_word(const char *restrict word)
 {
         int len = strlen(word);
@@ -201,7 +131,7 @@ match_word(const char *restrict word)
         return true;
 }
 
-bool
+static bool
 match(char expected)
 {
         if (*current_ptr != expected) return false;
@@ -211,7 +141,7 @@ match(char expected)
 
 #define get_consume_lex() (*current_ptr++)
 
-char *
+static char *
 get_string()
 {
         /* To test */
@@ -228,7 +158,7 @@ get_string()
         return ret;
 }
 
-char *
+static char *
 get_char()
 {
         /* To test */
@@ -245,7 +175,7 @@ get_char()
         return ret;
 }
 
-char *
+static char *
 get_identifier()
 {
         /* To test */
@@ -263,19 +193,19 @@ get_identifier()
         return ret;
 }
 
-int
+static int
 get_number()
 {
-        int n = current_ptr[-1];
+        int n = current_ptr[-1] - '0';
         while (*current_ptr >= '0' && *current_ptr <= '9') {
                 n *= 10;
-                n += *current_ptr;
+                n += *current_ptr - '0';
                 ++current_ptr;
         }
         return n;
 }
 
-void
+static void
 get_comment()
 {
         for (;;) {
@@ -284,7 +214,7 @@ get_comment()
         }
 }
 
-vlex
+void
 lex_analize(char *source)
 {
         char current;
@@ -352,7 +282,7 @@ lex_analize(char *source)
                         if (match('-'))
                                 add_token(LESS_LESS);
                         else
-                                add_token(LESS);
+                                add_token(MINUS);
                         break;
                 case '=':
                         if (match('='))
@@ -455,18 +385,17 @@ lex_analize(char *source)
         }
 }
 
+#if 0
 int
 main(int argc, char **argv)
 {
         if (argc != 2) return -1;
-
         char buf[1024 * 1024];
         int fd = open(argv[1], O_RDONLY);
         if (fd < 0) {
                 report("Can not open to read file `%s`\n", argv[1]);
                 return -1;
         }
-
         ssize_t n = read(fd, buf, sizeof buf - 1);
         if (n <= 0) {
                 report("Can not read from `%s`\n", argv[1]);
@@ -476,3 +405,4 @@ main(int argc, char **argv)
         lex_analize(buf);
         return 0;
 }
+#endif
