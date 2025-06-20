@@ -6,7 +6,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static void report(char *format, ...)
+static void
+report(char *format, ...)
 {
         va_list args;
         va_start(args, format);
@@ -154,32 +155,32 @@ typedef struct vtok {
         struct vtok *prev;
 } vtok;
 
-/* Shutout cpp im using c */
+typedef enum Exprtype {
+        ASSIGNEXPR,
+        BINEXPR,
+        UNEXPR,
+        CALLEXPR,
+        LITEXPR,
+        VAREXPR,
+} Exprtype;
+
 // clang-format off
 typedef struct Expr {
         union {
-                struct Assignexpr { struct Expr *value; vtok *name; } Assignexpr;
-                struct Binexpr    { struct Expr *rhs; struct Expr *lhs; vtok *op; } binexpr;
-                struct Unexpr     { struct Expr *rhs; vtok *op; } unexpr;
-                struct Callexpr   { struct Expr **args; int count; vtok *name; } callexpr;
-                struct Varexpr    { struct Expr *value; vtok *name; } varexpr;
-                struct Litexpr    { vtok *value; } litexpr;
+                struct { struct Expr *value; vtok *name; } assignexpr;
+                struct { struct Expr *rhs; struct Expr *lhs; vtok *op; } binexpr;
+                struct { struct Expr *rhs; vtok *op; } unexpr;
+                struct { struct Expr **args; int count; vtok *name; } callexpr;
+                struct { struct Expr *value; vtok *name; } varexpr;
+                struct { vtok *value; } litexpr;
         };
-        enum {
-                ASSIGNEXPR,
-                BINEXPR,
-                UNEXPR,
-                CALLEXPR,
-                LITEXPR,
-                VAREXPR,
-        } type;
+        Exprtype type;
         /* Linked list stuff */
         struct Expr *next;
         struct Expr *prev;
 } Expr;
 // clang-format on
 
-/* Shutout cpp im using c */
 static const char *EXPR_REPR[] = {
         [ASSIGNEXPR] = "Assign",
         [BINEXPR] = "Binary",
@@ -198,7 +199,6 @@ void lex_analize(char *source);
 
 /* Print the list of tokens */
 void print_tokens();
-void print_token(vtok *t);
 void print_literal(vtok *tok);
 
 void tok_parse();

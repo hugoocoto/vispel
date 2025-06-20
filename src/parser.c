@@ -317,6 +317,10 @@ tok_parse()
                 /* Get an expression and link it to the list of expressions */
                 link_expression(get_expression());
 
-                if (!match(SEMICOLON)) expect_token(SEMICOLON);
+                /* I add EOF here so I can evaluate a single expression witout
+                 * provide the semicolon.
+                 * This is not a feature, but a humman-bug fix */
+                if (!match(SEMICOLON) && get_token()->token == END_OF_FILE) continue;
+                expect_token(SEMICOLON);
         }
 }
