@@ -6,6 +6,7 @@
  * */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "interpreter.h"
 #include "tokens.h"
@@ -28,7 +29,7 @@ print_val(Value v)
 }
 
 Value
-get_lit_value(Expr *e)
+eval_litexpr(Expr *e)
 {
         Value v;
         switch (e->litexpr.value->token) {
@@ -50,7 +51,7 @@ get_lit_value(Expr *e)
                 v.num = 0;
                 break;
         default:
-                report("No yet implemented: get_lit_value for %s\n",
+                report("No yet implemented: eval_litexpr for %s\n",
                        TOKEN_REPR[e->litexpr.value->token]);
                 exit(1);
         }
@@ -65,6 +66,14 @@ panik_invalid_binop(Value L, vtoktype OP, Value R)
         exit(1);
 }
 
+void
+panik_invalid_unop(vtoktype OP, Value R)
+{
+        report("Invalid binary operation %s for %s\n",
+               TOKEN_REPR[OP], VALTYPE_REPR[R.type]);
+        exit(1);
+}
+
 int
 is_true(Value v)
 {
@@ -76,12 +85,52 @@ is_true(Value v)
         default:
                 report("No yet implemented: is_true for %s\n",
                        VALTYPE_REPR[v.type]);
-                break;
+                exit(1);
         }
 }
 
+int
+is_equal(Value v1, Value v2)
+{
+        if (v1.type != v2.type) return 0;
+
+        switch (v1.type) {
+        case TYPE_NUM:
+                return v1.num == v2.num;
+        case TYPE_STR:
+                return strcmp(v1.str, v2.str) == 0;
+        default:
+                report("No yet implemented: is_equal for %s and %s\n",
+                       VALTYPE_REPR[v1.type], VALTYPE_REPR[v1.type]);
+                exit(1);
+        }
+}
+
+int
+is_greater(Value v1, Value v2)
+{
+        if (v1.type != v2.type) return 0;
+
+        switch (v1.type) {
+        case TYPE_NUM:
+                return v1.num > v2.num;
+        case TYPE_STR:
+                return strcmp(v1.str, v2.str) > 0;
+        default:
+                report("No yet implemented: is_greater for %s and %s\n",
+                       VALTYPE_REPR[v1.type], VALTYPE_REPR[v1.type]);
+                exit(1);
+        }
+}
+
+int
+is_greater_equal(Value v1, Value v2)
+{
+        return is_equal(v1, v2) || is_greater(v1, v2);
+}
+
 Value
-get_bin_value(Expr *e)
+eval_binexpr(Expr *e)
 {
         Value v;
         Value lhs = eval_expr(e->binexpr.lhs);
@@ -130,19 +179,96 @@ get_bin_value(Expr *e)
                 v.num = is_true(rhs) && is_true(lhs);
                 break;
 
-        case BANG_EQUAL:
-        case EQUAL_EQUAL:
-        case EQUAL:
-        case GREATER:
-        case GREATER_EQUAL:
-        case LESS:
-        case LESS_EQUAL:
         case BITWISE_AND:
+                if (rhs.type == TYPE_NUM && rhs.type == TYPE_NUM) {
+                        v.type = TYPE_NUM;
+                        v.num = rhs.num & lhs.num;
+                        break;
+                }
+                panik_invalid_binop(lhs, e->binexpr.op->token, rhs);
+
         case BITWISE_OR:
+                if (rhs.type == TYPE_NUM && rhs.type == TYPE_NUM) {
+                        v.type = TYPE_NUM;
+                        v.num = rhs.num | lhs.num;
+                        break;
+                }
+                panik_invalid_binop(lhs, e->binexpr.op->token, rhs);
+
         case BITWISE_XOR:
+                if (rhs.type == TYPE_NUM && rhs.type == TYPE_NUM) {
+                        v.type = TYPE_NUM;
+                        v.num = rhs.num ^ lhs.num;
+                        break;
+                }
+                panik_invalid_binop(lhs, e->binexpr.op->token, rhs);
+
+        case EQUAL_EQUAL:
+                v.type = TYPE_NUM;
+                v.num = is_equal(rhs, lhs);
+                break;
+
+        case BANG_EQUAL:
+                v.type = TYPE_NUM;
+                v.num = !is_equal(rhs, lhs);
+                break;
+
+        case GREATER:
+                v.type = TYPE_NUM;
+                v.num = is_greater(rhs, lhs);
+                break;
+
+        case GREATER_EQUAL:
+                v.type = TYPE_NUM;
+                v.num = is_greater_equal(rhs, lhs);
+                break;
+
+        case LESS:
+                v.type = TYPE_NUM;
+                v.num = !is_greater_equal(rhs, lhs);
+                break;
+
+        case LESS_EQUAL:
+                v.type = TYPE_NUM;
+                v.num = !is_greater(rhs, lhs);
+                break;
+
+        default:
+                report("Binexpr Operation no yet implemented: %s\n",
+                       TOKEN_REPR[e->litexpr.value->token]);
+                exit(1);
+        }
+        return v;
+}
+
+Value
+eval_unexpr(Expr *e)
+{
+        Value v;
+        Value lhs = eval_expr(e->binexpr.lhs);
+
+        switch (e->unexpr.op->token) {
+        case BANG:
+                v.type = TYPE_NUM;
+                v.num = !is_true(lhs);
+                break;
+
+        case MINUS:
+                if (lhs.type == TYPE_NUM) {
+                        v.type = TYPE_NUM;
+                        v.num = !is_true(lhs);
+                        break;
+                }
+                panik_invalid_unop(e->unexpr.op->token, lhs);
+
         case BITWISE_NOT:
-        case SHIFT_LEFT:
-        case SHIFT_RIGHT:
+                if (lhs.type == TYPE_NUM) {
+                        v.type = TYPE_NUM;
+                        v.num = ~lhs.num;
+                        break;
+                }
+                panik_invalid_unop(e->unexpr.op->token, lhs);
+
         default:
                 report("Binexpr Operation no yet implemented: %s\n",
                        TOKEN_REPR[e->litexpr.value->token]);
@@ -157,12 +283,14 @@ eval_expr(Expr *e)
         Value v;
         switch (e->type) {
         case LITEXPR:
-                v = get_lit_value(e);
+                v = eval_litexpr(e);
                 break;
         case BINEXPR:
-                v = get_bin_value(e);
+                v = eval_binexpr(e);
                 break;
         case UNEXPR:
+                v = eval_unexpr(e);
+                break;
         case CALLEXPR:
         case ASSIGNEXPR:
         case VAREXPR:
