@@ -1,8 +1,9 @@
-/* VISPEL lexer
+/* VISPEL lexer - Create tokens from plain text
  *
  * Author: Hugo Coto Florez
- * Repo: https://github.com/hugocotoflorez/vispel
- */
+ * Repo: github.com/hugocotoflorez/vispel
+ *
+ * */
 
 #include <assert.h>
 #include <ctype.h>
@@ -96,14 +97,12 @@ new_token(vtoktype token)
         return tok;
 }
 
-static void
-add_token(vtoktype token, ...)
+void
+add_literal_value(vtok *tok, ...)
 {
         va_list v;
-        vtok *tok = new_token(token);
-
-        va_start(v, token);
-        switch (token) {
+        va_start(v, tok);
+        switch (tok->token) {
         case STRING:
                 tok->str_literal = va_arg(v, char *);
                 break;
@@ -121,6 +120,12 @@ add_token(vtoktype token, ...)
         }
         va_end(v);
 }
+
+#define add_token(token, ...)                          \
+        do {                                           \
+                vtok *tok = new_token(token);          \
+                add_literal_value(tok, ##__VA_ARGS__); \
+        } while (0)
 
 static bool
 match_word(const char *restrict word)
@@ -218,6 +223,7 @@ void
 lex_analize(char *source)
 {
         char current;
+        head_token = NULL;
         current_ptr = source;
         start_line = current_ptr;
         for (;;) {

@@ -1,4 +1,12 @@
+/* VISPEL parser - Create AST from tokens
+ *
+ * Author: Hugo Coto Florez
+ * Repo: github.com/hugocotoflorez/vispel
+ *
+ * */
+
 #include <fcntl.h>
+#include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,38 +14,10 @@
 
 #include "tokens.h"
 
-// clang-format off
-typedef struct Expr {
-        union {
-                struct Assignexpr { struct Expr *value; vtok *name; } Assignexpr;
-                struct Binexpr    { struct Expr *rhs; struct Expr *lhs; vtok *op; } binexpr;
-                struct Unexpr     { struct Expr *rhs; vtok *op; } unexpr;
-                struct Callexpr   { struct Expr **args; int count; vtok *name; } callexpr;
-                struct Varexpr    { struct Expr *value; vtok *name; } varexpr;
-                struct Litexpr    { vtok *value; } litexpr;
-        };
-        enum {
-                ASSIGNEXPR,
-                BINEXPR,
-                UNEXPR,
-                CALLEXPR,
-                LITEXPR,
-                VAREXPR,
-        } type;
-        /* Linked list stuff */
-        struct Expr *next;
-        struct Expr *prev;
-} Expr;
-// clang-format on
-
-typedef struct Unop {
-        Expr lhs;
-        vtok op;
-} Unop;
-
-extern vtok *head_token;
 vtok *current_token = NULL;
 Expr *head_expr = NULL;
+jmp_buf panik_jmp;
+
 
 static const char *EXPR_REPR[] = {
         [ASSIGNEXPR] = "Assign",
@@ -49,7 +29,7 @@ static const char *EXPR_REPR[] = {
 };
 
 void
-print_parsed_token(Expr *e)
+print_ast_branch(Expr *e)
 {
         static int indent = 0;
         const int indent_size = 2;
@@ -63,19 +43,19 @@ print_parsed_token(Expr *e)
         case BINEXPR:
                 printf("%*s", indent * indent_size, "");
                 printf("- [lhs] ");
-                print_parsed_token(e->binexpr.lhs);
+                print_ast_branch(e->binexpr.lhs);
                 printf("%*s", indent * indent_size, "");
                 printf("- [op] %s\n", TOKEN_REPR[e->binexpr.op->token]);
                 printf("%*s", indent * indent_size, "");
                 printf("- [rhs] ");
-                print_parsed_token(e->binexpr.rhs);
+                print_ast_branch(e->binexpr.rhs);
                 break;
         case UNEXPR:
                 printf("%*s", indent * indent_size, "");
                 printf("- [op] %s\n", TOKEN_REPR[e->unexpr.op->token]);
                 printf("%*s", indent * indent_size, "");
                 printf("- [rhs] ");
-                print_parsed_token(e->unexpr.rhs);
+                print_ast_branch(e->unexpr.rhs);
                 break;
         case CALLEXPR:
                 printf("[callexpr] Todo\n");
@@ -95,15 +75,15 @@ print_parsed_token(Expr *e)
 }
 
 void
-print_parsed_tokens()
+print_ast()
 {
-        printf("------------------------------\n");
+        printf("-----------|AST|-----------\n");
         Expr *e = head_expr;
         while (e) {
-                print_parsed_token(e);
+                print_ast_branch(e);
                 e = e->next;
         }
-        printf("------------------------------\n");
+        printf("---------------------------\n");
 }
 
 /* Use only to create a expr of a concrete type */
@@ -178,6 +158,23 @@ match(vtoktype token)
 }
 
 void
+expect_token(vtoktype expected)
+{
+        vtok *tok = get_token();
+        if (tok->token != expected) {
+                report("Expected %s but got %s\n", TOKEN_REPR[expected], TOKEN_REPR[tok->token]);
+                longjmp(panik_jmp, 1);
+        }
+}
+
+void
+expect_consume_token(vtoktype expected)
+{
+        expect_token(expected);
+        consume_token();
+}
+
+void
 link_expression(Expr *e)
 {
         if (head_expr == NULL) {
@@ -190,38 +187,56 @@ link_expression(Expr *e)
         last->next = e;
 }
 
-Expr *
-get_literal()
+vtok *
+is_literal()
 {
         vtok *t;
-        Expr *e;
         // clang-format off
         if ((t=match(NUMBER))
          || (t=match(STRING))
          || (t=match(CHAR))
          || (t=match(TRUE))
          || (t=match(FALSE)))
+                return t;
         // clang-format on
-        {
-                e = new_litexpr(t);
+        return NULL;
+}
+
+Expr *
+get_literal()
+{
+        vtok *t;
+        if ((t = is_literal())) {
+                return new_litexpr(t);
+        }
+        /* can't be used expect() because LITERAL is an expression, not a token */
+        report("Expected LITERAL but got %s\n", TOKEN_REPR[get_token()->token]);
+        longjmp(panik_jmp, 1);
+        return NULL;
+}
+
+Expr *get_expression();
+
+Expr *
+get_group()
+{
+        Expr *e;
+        if (match(LEFT_PARENT)) {
+                e = get_expression();
+                expect_consume_token(RIGHT_PARENT);
                 return e;
         }
-
-        printf("Expected literal but got");
-        print_token(get_consume_token());
-        return NULL;
+        return get_literal();
 }
 
 Expr *
 get_unary()
 {
         vtok *op;
-        Expr *e;
         if ((op = match(MINUS)) || (op = match(BANG))) {
-                e = new_unexpr(op, get_unary());
+                return new_unexpr(op, get_unary());
         } else
-                e = get_literal();
-        return e;
+                return get_group();
 }
 
 Expr *
@@ -286,41 +301,31 @@ tok_parse()
                 report("tok_parse: invalid token list. Call lex_analize() first.\n");
                 exit(1);
         }
+
+        head_expr = NULL;
         current_token = head_token;
 
         for (;;) {
-                link_expression(get_expression());
+                /* Set point to reset after failure */
+                if (setjmp(panik_jmp)) {
+                        /* This is executed after failure. Go down to the
+                         * next semicolon, as current expression failed. After
+                         * the semicolon it should continue without problems. */
+                        vtok *tok;
+                        for (;;) {
+                                tok = get_token();
+                                if (tok->token == END_OF_FILE) break;
+                                consume_token();
+                                if (tok->token == SEMICOLON) break;
+                        }
+                        continue;
+                }
+
                 if (get_token()->token == END_OF_FILE) break;
-                print_token(get_token());
+
+                /* Get an expression and link it to the list of expressions */
+                link_expression(get_expression());
+
+                if (!match(SEMICOLON)) expect_token(SEMICOLON);
         }
-}
-
-
-int
-main(int argc, char **argv)
-{
-        char buf[1024 * 1024];
-        int fd;
-        if (argc == 2)
-                fd = open(argv[1], O_RDONLY);
-        else
-                fd = open("../hello.vspl", O_RDONLY);
-
-        if (fd < 0) {
-                report("Can not open to read file `%s`\n", argv[1]);
-                return -1;
-        }
-        ssize_t n = read(fd, buf, sizeof buf - 1);
-        if (n <= 0) {
-                report("Can not read from `%s`\n", argv[1]);
-                return -1;
-        }
-        buf[n] = EOF;
-
-        lex_analize(buf);
-        print_tokens();
-        tok_parse();
-        print_parsed_tokens();
-
-        return 0;
 }

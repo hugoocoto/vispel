@@ -1,12 +1,15 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <unistd.h>
 
 void static report(char *format, ...)
 {
         va_list args;
         va_start(args, format);
+        if (isatty(STDERR_FILENO)) fprintf(stderr, "\033[31m");
         vfprintf(stderr, format, args);
+        if (isatty(STDERR_FILENO)) fprintf(stderr, "\033[0m");
         va_end(args);
         FILE *f = fopen("log.txt", "a");
         if (f) {
@@ -138,7 +141,32 @@ typedef struct vtok {
         struct vtok *prev;
 } vtok;
 
+// clang-format off
+typedef struct Expr {
+        union {
+                struct Assignexpr { struct Expr *value; vtok *name; } Assignexpr;
+                struct Binexpr    { struct Expr *rhs; struct Expr *lhs; vtok *op; } binexpr;
+                struct Unexpr     { struct Expr *rhs; vtok *op; } unexpr;
+                struct Callexpr   { struct Expr **args; int count; vtok *name; } callexpr;
+                struct Varexpr    { struct Expr *value; vtok *name; } varexpr;
+                struct Litexpr    { vtok *value; } litexpr;
+        };
+        enum {
+                ASSIGNEXPR,
+                BINEXPR,
+                UNEXPR,
+                CALLEXPR,
+                LITEXPR,
+                VAREXPR,
+        } type;
+        /* Linked list stuff */
+        struct Expr *next;
+        struct Expr *prev;
+} Expr;
+// clang-format on
+
 extern vtok *head_token;
+extern Expr *head_expr;
 
 /* Get source code as a string and return a linked list of tokens */
 void lex_analize(char *source);
@@ -147,3 +175,6 @@ void lex_analize(char *source);
 void print_tokens();
 void print_token(vtok *t);
 void print_literal(vtok *tok);
+
+void tok_parse();
+void print_ast();
