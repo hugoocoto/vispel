@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "interpreter.h"
 #include "tokens.h"
 
 #define PROMPT "[vispel] >> "
@@ -40,6 +41,7 @@ main(int argc, char **argv)
                 // print_tokens();
                 tok_parse();
                 print_ast();
+                eval();
                 if (interactive) prompt();
         }
         if (n < 0) {

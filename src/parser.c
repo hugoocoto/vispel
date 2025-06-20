@@ -19,15 +19,6 @@ Expr *head_expr = NULL;
 jmp_buf panik_jmp;
 
 
-static const char *EXPR_REPR[] = {
-        [ASSIGNEXPR] = "Assign",
-        [BINEXPR] = "Binary",
-        [UNEXPR] = "Unary",
-        [CALLEXPR] = "Call",
-        [LITEXPR] = "Literal",
-        [VAREXPR] = "Variable",
-};
-
 void
 print_ast_branch(Expr *e)
 {

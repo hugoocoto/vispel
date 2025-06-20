@@ -1,9 +1,12 @@
+#ifndef VTOKENS_H
+#define VTOKENS_H
+
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 
-void static report(char *format, ...)
+static void report(char *format, ...)
 {
         va_list args;
         va_start(args, format);
@@ -126,12 +129,22 @@ static const char *TOKEN_REPR[] = {
         [UNKNOWN] = "UNKNOWN",
 };
 
+typedef enum Valtype {
+        TYPE_NUM,
+        TYPE_STR,
+} Valtype;
+
+static const char *VALTYPE_REPR[] = {
+        [TYPE_NUM] = "NUMBER",
+        [TYPE_STR] = "STRING",
+};
+
+
 typedef struct vtok {
         vtoktype token;
         const char *lexeme;
         union {
                 int num_literal;
-                void *mem_literal;
                 char *str_literal;
         };
         int line;
@@ -141,6 +154,7 @@ typedef struct vtok {
         struct vtok *prev;
 } vtok;
 
+/* Shutout cpp im using c */
 // clang-format off
 typedef struct Expr {
         union {
@@ -165,6 +179,17 @@ typedef struct Expr {
 } Expr;
 // clang-format on
 
+/* Shutout cpp im using c */
+static const char *EXPR_REPR[] = {
+        [ASSIGNEXPR] = "Assign",
+        [BINEXPR] = "Binary",
+        [UNEXPR] = "Unary",
+        [CALLEXPR] = "Call",
+        [LITEXPR] = "Literal",
+        [VAREXPR] = "Variable",
+};
+
+
 extern vtok *head_token;
 extern Expr *head_expr;
 
@@ -178,3 +203,5 @@ void print_literal(vtok *tok);
 
 void tok_parse();
 void print_ast();
+
+#endif
