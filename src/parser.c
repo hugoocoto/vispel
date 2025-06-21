@@ -74,9 +74,11 @@ void
 print_ast_branch(Stmt *s)
 {
         switch (s->type) {
+        case EXPRSTMT:
+                print_ast_expr_branch(s->expr.body);
+                break;
         case VARDECLSTMT:
         case BLOCKSTMT:
-        case EXPRSTMT:
         default:
                 report("No yet implemented: print_ast_branch for %s\n",
                        STMT_REPR[s->type]);

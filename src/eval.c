@@ -245,7 +245,7 @@ Value
 eval_unexpr(Expr *e)
 {
         Value v;
-        Value lhs = eval_expr(e->binexpr.lhs);
+        Value lhs = eval_expr(e->unexpr.rhs);
 
         switch (e->unexpr.op->token) {
         case BANG:
@@ -256,7 +256,7 @@ eval_unexpr(Expr *e)
         case MINUS:
                 if (lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
-                        v.num = !is_true(lhs);
+                        v.num = -lhs.num;
                         break;
                 }
                 panik_invalid_unop(e->unexpr.op->token, lhs);
@@ -270,7 +270,7 @@ eval_unexpr(Expr *e)
                 panik_invalid_unop(e->unexpr.op->token, lhs);
 
         default:
-                report("Binexpr Operation no yet implemented: %s\n",
+                report("unexpr operation no yet implemented: %s\n",
                        TOKEN_REPR[e->litexpr.value->token]);
                 longjmp(panik_jmp, 1);
         }
@@ -295,6 +295,7 @@ eval_expr(Expr *e)
         case ASSIGNEXPR:
         case VAREXPR:
         default:
+                printf("%d\n", e->type);
                 report("Todo: eval expression %s\n", EXPR_REPR[e->type]);
                 longjmp(panik_jmp, 1);
                 break;

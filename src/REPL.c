@@ -38,9 +38,9 @@ main(int argc, char **argv)
         while ((n = read(fd, buf, sizeof buf - 1)) > 0) {
                 buf[n] = EOF;
                 lex_analize(buf);
-                // print_tokens();
+                print_tokens();
                 tok_parse();
-                // print_ast();
+                print_ast();
                 eval();
                 if (interactive) prompt();
         }
