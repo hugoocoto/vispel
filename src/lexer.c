@@ -1,4 +1,4 @@
-/* VISPEL lexer - Create tokens from plain text
+/* VISPEL lexer - Create tokens from plain textle
  *
  * Author: Hugo Coto Florez
  * Repo: github.com/hugocotoflorez/vispel
@@ -366,6 +366,8 @@ lex_analize(char *source)
                                 add_token(FALSE);
                         else if (match_word("function"))
                                 add_token(FUNCTION);
+                        else if (match_word("var"))
+                                add_token(VAR);
                         else if (match_word("for"))
                                 add_token(FOR);
                         else if (match_word("if"))

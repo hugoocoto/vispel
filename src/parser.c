@@ -12,15 +12,15 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "env.h"
 #include "tokens.h"
 
 vtok *current_token = NULL;
-Expr *head_expr = NULL;
+Stmt *head_stmt = NULL;
 jmp_buf panik_jmp;
 
-
 void
-print_ast_branch(Expr *e)
+print_ast_expr_branch(Expr *e)
 {
         static int indent = 0;
         const int indent_size = 2;
@@ -29,24 +29,29 @@ print_ast_branch(Expr *e)
 
         switch (e->type) {
         case ASSIGNEXPR:
-                printf("[assignexpr] Todo\n");
+                printf("%*s", indent * indent_size, "");
+                printf("- [name] %s\n", e->assignexpr.name->str_literal);
+                printf("%*s", indent * indent_size, "");
+                printf("- [value] %s\n", TOKEN_REPR[e->binexpr.op->token]);
+                printf("%*s", indent * indent_size, "");
+                print_ast_expr_branch(e->assignexpr.value);
                 break;
         case BINEXPR:
                 printf("%*s", indent * indent_size, "");
                 printf("- [lhs] ");
-                print_ast_branch(e->binexpr.lhs);
+                print_ast_expr_branch(e->binexpr.lhs);
                 printf("%*s", indent * indent_size, "");
                 printf("- [op] %s\n", TOKEN_REPR[e->binexpr.op->token]);
                 printf("%*s", indent * indent_size, "");
                 printf("- [rhs] ");
-                print_ast_branch(e->binexpr.rhs);
+                print_ast_expr_branch(e->binexpr.rhs);
                 break;
         case UNEXPR:
                 printf("%*s", indent * indent_size, "");
                 printf("- [op] %s\n", TOKEN_REPR[e->unexpr.op->token]);
                 printf("%*s", indent * indent_size, "");
                 printf("- [rhs] ");
-                print_ast_branch(e->unexpr.rhs);
+                print_ast_expr_branch(e->unexpr.rhs);
                 break;
         case CALLEXPR:
                 printf("[callexpr] Todo\n");
@@ -66,10 +71,25 @@ print_ast_branch(Expr *e)
 }
 
 void
+print_ast_branch(Stmt *s)
+{
+        switch (s->type) {
+        case VARDECLSTMT:
+        case BLOCKSTMT:
+        case EXPRSTMT:
+        default:
+                report("No yet implemented: print_ast_branch for %s\n",
+                       STMT_REPR[s->type]);
+                longjmp(panik_jmp, 1);
+                break;
+        }
+}
+
+void
 print_ast()
 {
         printf("-----------|AST|-----------\n");
-        Expr *e = head_expr;
+        Stmt *e = head_stmt;
         while (e) {
                 print_ast_branch(e);
                 e = e->next;
@@ -104,6 +124,16 @@ new_unexpr(vtok *op, Expr *rhs)
         e->unexpr.rhs = rhs;
         e->unexpr.op = op;
         e->type = UNEXPR;
+        return e;
+}
+
+Expr *
+new_assignexpr(vtok *name, Expr *value)
+{
+        Expr *e = new_expr();
+        e->assignexpr.value = value;
+        e->assignexpr.name = name;
+        e->type = ASSIGNEXPR;
         return e;
 }
 
@@ -161,21 +191,25 @@ expect_token(vtoktype expected)
 void
 expect_consume_token(vtoktype expected)
 {
+        /* I add EOF here so I can evaluate a single expression witout
+         * provide the semicolon.
+         * This is not a feature, but a humman-bug fix */
+        if (expected == SEMICOLON && get_token()->token == END_OF_FILE) return;
         expect_token(expected);
         consume_token();
 }
 
 void
-link_expression(Expr *e)
+link_stmt(Stmt *s)
 {
-        if (head_expr == NULL) {
-                head_expr = e;
+        if (head_stmt == NULL) {
+                head_stmt = s;
                 return;
         }
-        Expr *last = head_expr;
+        Stmt *last = head_stmt;
         while (last->next)
                 last = last->next;
-        last->next = e;
+        last->next = s;
 }
 
 vtok *
@@ -186,6 +220,7 @@ is_literal()
         if ((t=match(NUMBER))
          || (t=match(STRING))
          || (t=match(CHAR))
+         || (t=match(IDENTIFIER))
          || (t=match(TRUE))
          || (t=match(FALSE)))
                 return t;
@@ -280,9 +315,143 @@ get_equality()
 }
 
 Expr *
+get_assignment()
+{
+        vtok *id;
+        if ((id = match(IDENTIFIER))) {
+                if (match(EQUAL))
+                        return new_assignexpr(id, get_expression());
+                current_token = current_token->prev;
+        }
+        return get_equality();
+}
+
+Expr *
 get_expression()
 {
-        return get_equality();
+        return get_assignment();
+}
+
+Stmt *
+new_stmt()
+{
+        return calloc(1, sizeof(Stmt));
+}
+
+Stmt *
+new_blockstmt()
+{
+        Stmt *s = new_stmt();
+        s->type = BLOCKSTMT;
+        s->block.body = NULL;
+        return s;
+}
+
+Stmt *
+new_exprstmt(Expr *e)
+{
+        Stmt *s = new_stmt();
+        s->type = EXPRSTMT;
+        s->expr.body = e;
+        return s;
+}
+
+Stmt *
+new_vardecl(vtok *id, Expr *value)
+{
+        Stmt *s = new_stmt();
+        s->type = VARDECLSTMT;
+        s->vardecl.name = id;
+        s->vardecl.value = value;
+        return s;
+}
+
+void
+blockstmt_addstmt(Stmt *block, Stmt *s)
+{
+        if (block->block.body == NULL) {
+                block->block.body = s;
+                return;
+        }
+        Stmt *current = block->block.body;
+        while (current->next)
+                current = current->next;
+        current->next = s;
+        s->prev = current;
+}
+
+Stmt *get_declaration();
+
+Stmt *
+get_program()
+{
+        Stmt *s = NULL;
+        Stmt *c;
+        while (get_token()->token != END_OF_FILE) {
+                c = get_declaration();
+                if (s) {
+                        s->next = c;
+                        c->prev = s;
+                } else
+                        s = c;
+        }
+        return s;
+}
+
+Stmt *get_vardecl();
+Stmt *get_stmt();
+
+Stmt *
+get_declaration()
+{
+        return get_vardecl() ?: get_stmt();
+}
+
+Stmt *
+get_vardecl()
+{
+        vtok *t = current_token;
+        vtok *id;
+        Expr *value = NULL;
+        if (match(VAR) && (id = match(IDENTIFIER))) {
+                if (match(EQUAL)) {
+                        value = get_expression();
+                }
+                expect_consume_token(SEMICOLON);
+                return new_vardecl(id, value);
+        }
+        return NULL;
+}
+
+Stmt *get_block();
+Stmt *get_exprstmt();
+
+Stmt *
+get_stmt()
+{
+        return get_block() ?: get_exprstmt();
+}
+
+Stmt *
+get_exprstmt()
+{
+        Stmt *s = new_exprstmt(get_expression());
+        expect_consume_token(SEMICOLON);
+        return s;
+}
+
+Stmt *
+get_block()
+{
+        if (match(LEFT_BRACE)) {
+                Stmt *s = new_blockstmt();
+                do {
+                        blockstmt_addstmt(s, get_stmt());
+                        expect_consume_token(SEMICOLON);
+                } while (match(RIGHT_BRACE));
+                return s;
+        }
+        return NULL;
 }
 
 void
@@ -293,10 +462,10 @@ tok_parse()
                 exit(1);
         }
 
-        head_expr = NULL;
+        head_stmt = NULL;
         current_token = head_token;
 
-        for (;;) {
+        do {
                 /* Set point to reset after failure */
                 if (setjmp(panik_jmp)) {
                         /* This is executed after failure. Go down to the
@@ -308,19 +477,11 @@ tok_parse()
                                 if (tok->token == END_OF_FILE) break;
                                 consume_token();
                                 if (tok->token == SEMICOLON) break;
+                                continue;
                         }
-                        continue;
                 }
 
-                if (get_token()->token == END_OF_FILE) break;
+                link_stmt(get_program());
 
-                /* Get an expression and link it to the list of expressions */
-                link_expression(get_expression());
-
-                /* I add EOF here so I can evaluate a single expression witout
-                 * provide the semicolon.
-                 * This is not a feature, but a humman-bug fix */
-                if (!match(SEMICOLON) && get_token()->token == END_OF_FILE) continue;
-                expect_token(SEMICOLON);
-        }
+        } while (0);
 }

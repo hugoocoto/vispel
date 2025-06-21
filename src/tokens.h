@@ -54,6 +54,7 @@ typedef enum {
         ELSE,
         FALSE,
         FUNCTION,
+        VAR,
         FOR,
         IF,
         NIL,
@@ -107,6 +108,7 @@ static const char *TOKEN_REPR[] = {
         [ELSE] = "ELSE",
         [FALSE] = "FALSE",
         [FUNCTION] = "FUNCTION",
+        [VAR] = "VAR",
         [FOR] = "FOR",
         [IF] = "IF",
         [NIL] = "NIL",
@@ -190,9 +192,38 @@ static const char *EXPR_REPR[] = {
         [VAREXPR] = "Variable",
 };
 
+typedef enum {
+        VARDECLSTMT,
+        BLOCKSTMT,
+        EXPRSTMT,
+} Stmttype;
+
+static const char *STMT_REPR[] = {
+        [VARDECLSTMT] = "VARDECLSTMT",
+        [BLOCKSTMT] = "BLOCKSTMT",
+        [EXPRSTMT] = "EXPRSTMT",
+};
+
+typedef struct Stmt {
+        union {
+                struct {
+                        vtok *name;
+                        Expr *value;
+                } vardecl;
+                struct {
+                        struct Stmt *body;
+                } block;
+                struct {
+                        Expr *body;
+                } expr;
+        };
+        Stmttype type;
+        struct Stmt *prev;
+        struct Stmt *next;
+} Stmt;
 
 extern vtok *head_token;
-extern Expr *head_expr;
+extern Stmt *head_stmt;
 
 /* Get source code as a string and return a linked list of tokens */
 void lex_analize(char *source);

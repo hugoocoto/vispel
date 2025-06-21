@@ -24,7 +24,7 @@ print_val(Value v)
         default:
                 report("No yet implemented: print_val for %s\n",
                        VALTYPE_REPR[v.type]);
-                exit(1);
+                longjmp(panik_jmp, 1);
         }
 }
 
@@ -53,7 +53,7 @@ eval_litexpr(Expr *e)
         default:
                 report("No yet implemented: eval_litexpr for %s\n",
                        TOKEN_REPR[e->litexpr.value->token]);
-                exit(1);
+                longjmp(panik_jmp, 1);
         }
         return v;
 }
@@ -63,7 +63,7 @@ panik_invalid_binop(Value L, vtoktype OP, Value R)
 {
         report("Invalid binary operation %s between %s and %s\n",
                TOKEN_REPR[OP], VALTYPE_REPR[L.type], VALTYPE_REPR[R.type]);
-        exit(1);
+        longjmp(panik_jmp, 1);
 }
 
 void
@@ -71,7 +71,7 @@ panik_invalid_unop(vtoktype OP, Value R)
 {
         report("Invalid binary operation %s for %s\n",
                TOKEN_REPR[OP], VALTYPE_REPR[R.type]);
-        exit(1);
+        longjmp(panik_jmp, 1);
 }
 
 int
@@ -85,7 +85,7 @@ is_true(Value v)
         default:
                 report("No yet implemented: is_true for %s\n",
                        VALTYPE_REPR[v.type]);
-                exit(1);
+                longjmp(panik_jmp, 1);
         }
 }
 
@@ -102,7 +102,7 @@ is_equal(Value v1, Value v2)
         default:
                 report("No yet implemented: is_equal for %s and %s\n",
                        VALTYPE_REPR[v1.type], VALTYPE_REPR[v1.type]);
-                exit(1);
+                longjmp(panik_jmp, 1);
         }
 }
 
@@ -119,7 +119,7 @@ is_greater(Value v1, Value v2)
         default:
                 report("No yet implemented: is_greater for %s and %s\n",
                        VALTYPE_REPR[v1.type], VALTYPE_REPR[v1.type]);
-                exit(1);
+                longjmp(panik_jmp, 1);
         }
 }
 
@@ -236,7 +236,7 @@ eval_binexpr(Expr *e)
         default:
                 report("Binexpr Operation no yet implemented: %s\n",
                        TOKEN_REPR[e->litexpr.value->token]);
-                exit(1);
+                longjmp(panik_jmp, 1);
         }
         return v;
 }
@@ -272,7 +272,7 @@ eval_unexpr(Expr *e)
         default:
                 report("Binexpr Operation no yet implemented: %s\n",
                        TOKEN_REPR[e->litexpr.value->token]);
-                exit(1);
+                longjmp(panik_jmp, 1);
         }
         return v;
 }
@@ -296,18 +296,34 @@ eval_expr(Expr *e)
         case VAREXPR:
         default:
                 report("Todo: eval expression %s\n", EXPR_REPR[e->type]);
-                exit(1);
+                longjmp(panik_jmp, 1);
                 break;
         }
         return v;
 }
 
+Value
+eval_stmt(Stmt *s)
+{
+        switch (s->type) {
+        case EXPRSTMT:
+                return eval_expr(s->expr.body);
+        case VARDECLSTMT:
+        case BLOCKSTMT:
+        default:
+                report("Todo: eval_stmt for %s\n", STMT_REPR[s->type]);
+                longjmp(panik_jmp, 1);
+                break;
+        }
+        return (Value) { .type = TYPE_STR, .str = "no-value" };
+}
+
 void
 eval()
 {
-        Expr *e = head_expr;
-        while (e) {
-                print_val(eval_expr(e));
-                e = e->next;
+        Stmt *s = head_stmt;
+        while (s) {
+                print_val(eval_stmt(s));
+                s = s->next;
         }
 }
