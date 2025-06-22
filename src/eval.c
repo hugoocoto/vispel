@@ -4,6 +4,7 @@
  * Repo: github.com/hugocotoflorez/vispel
  *
  * */
+
 #include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -319,8 +320,7 @@ eval_expr(Expr *e)
         case CALLEXPR:
         case VAREXPR:
         default:
-                printf("%d\n", e->type);
-                report("Todo: eval expression %s\n", EXPR_REPR[e->type]);
+                report("No yet implemented: eval_expr for %s\n", EXPR_REPR[e->type]);
                 EXIT(1);
                 break;
         }
@@ -330,12 +330,15 @@ eval_expr(Expr *e)
 Value
 eval_stmt(Stmt *s)
 {
+        Value v = (Value) { .type = TYPE_STR, .str = "no-value" };
         switch (s->type) {
         case EXPRSTMT:
-                return eval_expr(s->expr.body);
+                v = eval_expr(s->expr.body);
+                break;
         case VARDECLSTMT:
-                env_add(s->vardecl.name->str_literal,
-                        eval_expr(s->vardecl.value));
+                v = env_add(s->vardecl.name->str_literal,
+                            eval_expr(s->vardecl.value));
+                if (s->vardecl.value) return v;
                 break;
         case BLOCKSTMT:
         default:
@@ -343,7 +346,7 @@ eval_stmt(Stmt *s)
                 EXIT(1);
                 break;
         }
-        return (Value) { .type = TYPE_STR, .str = "no-value" };
+        return v;
 }
 
 void

@@ -11,7 +11,7 @@ void env_create();
 void env_destroy();
 
 /* Add and get a variable. On error jump to eval_runtime_error */
-void env_add(char *name, Value value);
+Value env_add(char *name, Value value);
 Value env_get(char *name);
 Value env_set(char *name, Value value);
 

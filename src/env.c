@@ -45,7 +45,7 @@ env_destroy()
         lower_env = lower_env->upper;
 }
 
-void
+Value
 env_add(char *name, Value value)
 {
         if (!lower_env) {
@@ -58,7 +58,7 @@ env_add(char *name, Value value)
                 longjmp(eval_runtime_error, 1);
         }
 
-        shput(lower_env->map, name, value);
+        return shput(lower_env->map, name, value);
 }
 
 Value
