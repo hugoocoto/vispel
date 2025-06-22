@@ -87,9 +87,10 @@ new_token(vtoktype token)
         tok->lexeme = TOKEN_REPR[token];
         tok->offset = start_offset - start_line + 1;
         /* Link token */
+        /* this work if multiple lex analisis? */
         static vtok *prev = NULL;
         tok->next = NULL;
-        tok->prev = prev;
+        // tok->prev = prev;
         if (prev) prev->next = tok;
         prev = tok;
 

@@ -4,12 +4,19 @@
  * Repo: github.com/hugocotoflorez/vispel
  *
  * */
+#include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "env.h"
 #include "interpreter.h"
 #include "tokens.h"
+
+jmp_buf eval_runtime_error;
+
+/* should return to repr. Now it does nothing */
+#define EXIT(X) longjmp(eval_runtime_error, 1)
 
 void
 print_val(Value v)
@@ -24,7 +31,7 @@ print_val(Value v)
         default:
                 report("No yet implemented: print_val for %s\n",
                        VALTYPE_REPR[v.type]);
-                longjmp(panik_jmp, 1);
+                EXIT(1);
         }
 }
 
@@ -50,10 +57,13 @@ eval_litexpr(Expr *e)
                 v.type = TYPE_NUM;
                 v.num = 0;
                 break;
+        case IDENTIFIER:
+                v = env_get(e->litexpr.value->str_literal);
+                break;
         default:
                 report("No yet implemented: eval_litexpr for %s\n",
                        TOKEN_REPR[e->litexpr.value->token]);
-                longjmp(panik_jmp, 1);
+                EXIT(1);
         }
         return v;
 }
@@ -63,7 +73,7 @@ panik_invalid_binop(Value L, vtoktype OP, Value R)
 {
         report("Invalid binary operation %s between %s and %s\n",
                TOKEN_REPR[OP], VALTYPE_REPR[L.type], VALTYPE_REPR[R.type]);
-        longjmp(panik_jmp, 1);
+        EXIT(1);
 }
 
 void
@@ -71,7 +81,7 @@ panik_invalid_unop(vtoktype OP, Value R)
 {
         report("Invalid binary operation %s for %s\n",
                TOKEN_REPR[OP], VALTYPE_REPR[R.type]);
-        longjmp(panik_jmp, 1);
+        EXIT(1);
 }
 
 int
@@ -85,7 +95,7 @@ is_true(Value v)
         default:
                 report("No yet implemented: is_true for %s\n",
                        VALTYPE_REPR[v.type]);
-                longjmp(panik_jmp, 1);
+                EXIT(1);
         }
 }
 
@@ -102,7 +112,7 @@ is_equal(Value v1, Value v2)
         default:
                 report("No yet implemented: is_equal for %s and %s\n",
                        VALTYPE_REPR[v1.type], VALTYPE_REPR[v1.type]);
-                longjmp(panik_jmp, 1);
+                EXIT(1);
         }
 }
 
@@ -119,7 +129,7 @@ is_greater(Value v1, Value v2)
         default:
                 report("No yet implemented: is_greater for %s and %s\n",
                        VALTYPE_REPR[v1.type], VALTYPE_REPR[v1.type]);
-                longjmp(panik_jmp, 1);
+                EXIT(1);
         }
 }
 
@@ -138,7 +148,7 @@ eval_binexpr(Expr *e)
 
         switch (e->binexpr.op->token) {
         case MINUS:
-                if (rhs.type == TYPE_NUM && rhs.type == TYPE_NUM) {
+                if (rhs.type == TYPE_NUM && lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
                         v.num = rhs.num - lhs.num;
                         break;
@@ -146,7 +156,7 @@ eval_binexpr(Expr *e)
                 panik_invalid_binop(lhs, e->binexpr.op->token, rhs);
 
         case PLUS:
-                if (rhs.type == TYPE_NUM && rhs.type == TYPE_NUM) {
+                if (rhs.type == TYPE_NUM && lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
                         v.num = rhs.num + lhs.num;
                         break;
@@ -154,7 +164,7 @@ eval_binexpr(Expr *e)
                 panik_invalid_binop(lhs, e->binexpr.op->token, rhs);
 
         case SLASH:
-                if (rhs.type == TYPE_NUM && rhs.type == TYPE_NUM) {
+                if (rhs.type == TYPE_NUM && lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
                         v.num = rhs.num / lhs.num;
                         break;
@@ -162,7 +172,7 @@ eval_binexpr(Expr *e)
                 panik_invalid_binop(lhs, e->binexpr.op->token, rhs);
 
         case STAR:
-                if (rhs.type == TYPE_NUM && rhs.type == TYPE_NUM) {
+                if (rhs.type == TYPE_NUM && lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
                         v.num = rhs.num * lhs.num;
                         break;
@@ -180,7 +190,7 @@ eval_binexpr(Expr *e)
                 break;
 
         case BITWISE_AND:
-                if (rhs.type == TYPE_NUM && rhs.type == TYPE_NUM) {
+                if (rhs.type == TYPE_NUM && lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
                         v.num = rhs.num & lhs.num;
                         break;
@@ -188,7 +198,7 @@ eval_binexpr(Expr *e)
                 panik_invalid_binop(lhs, e->binexpr.op->token, rhs);
 
         case BITWISE_OR:
-                if (rhs.type == TYPE_NUM && rhs.type == TYPE_NUM) {
+                if (rhs.type == TYPE_NUM && lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
                         v.num = rhs.num | lhs.num;
                         break;
@@ -196,7 +206,7 @@ eval_binexpr(Expr *e)
                 panik_invalid_binop(lhs, e->binexpr.op->token, rhs);
 
         case BITWISE_XOR:
-                if (rhs.type == TYPE_NUM && rhs.type == TYPE_NUM) {
+                if (rhs.type == TYPE_NUM && lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
                         v.num = rhs.num ^ lhs.num;
                         break;
@@ -236,7 +246,7 @@ eval_binexpr(Expr *e)
         default:
                 report("Binexpr Operation no yet implemented: %s\n",
                        TOKEN_REPR[e->litexpr.value->token]);
-                longjmp(panik_jmp, 1);
+                EXIT(1);
         }
         return v;
 }
@@ -272,9 +282,18 @@ eval_unexpr(Expr *e)
         default:
                 report("unexpr operation no yet implemented: %s\n",
                        TOKEN_REPR[e->litexpr.value->token]);
-                longjmp(panik_jmp, 1);
+                EXIT(1);
         }
         return v;
+}
+
+Value eval_expr(Expr *e);
+
+Value
+eval_assignexpr(Expr *s)
+{
+        return env_set(s->assignexpr.name->str_literal,
+                       eval_expr(s->assignexpr.value));
 }
 
 Value
@@ -291,13 +310,15 @@ eval_expr(Expr *e)
         case UNEXPR:
                 v = eval_unexpr(e);
                 break;
-        case CALLEXPR:
         case ASSIGNEXPR:
+                v = eval_assignexpr(e);
+                break;
+        case CALLEXPR:
         case VAREXPR:
         default:
                 printf("%d\n", e->type);
                 report("Todo: eval expression %s\n", EXPR_REPR[e->type]);
-                longjmp(panik_jmp, 1);
+                EXIT(1);
                 break;
         }
         return v;
@@ -310,10 +331,13 @@ eval_stmt(Stmt *s)
         case EXPRSTMT:
                 return eval_expr(s->expr.body);
         case VARDECLSTMT:
+                env_add(s->vardecl.name->str_literal,
+                        eval_expr(s->vardecl.value));
+                break;
         case BLOCKSTMT:
         default:
                 report("Todo: eval_stmt for %s\n", STMT_REPR[s->type]);
-                longjmp(panik_jmp, 1);
+                EXIT(1);
                 break;
         }
         return (Value) { .type = TYPE_STR, .str = "no-value" };
@@ -323,6 +347,9 @@ void
 eval()
 {
         Stmt *s = head_stmt;
+        if (setjmp(eval_runtime_error)) {
+                s = s->next;
+        }
         while (s) {
                 print_val(eval_stmt(s));
                 s = s->next;

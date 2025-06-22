@@ -154,7 +154,6 @@ typedef struct vtok {
         intptr_t offset;
         /* Linked list stuff */
         struct vtok *next;
-        struct vtok *prev;
 } vtok;
 
 typedef enum Exprtype {
@@ -179,7 +178,6 @@ typedef struct Expr {
         Exprtype type;
         /* Linked list stuff */
         struct Expr *next;
-        struct Expr *prev;
 } Expr;
 // clang-format on
 
@@ -218,7 +216,6 @@ typedef struct Stmt {
                 } expr;
         };
         Stmttype type;
-        struct Stmt *prev;
         struct Stmt *next;
 } Stmt;
 

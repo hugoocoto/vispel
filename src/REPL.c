@@ -1,7 +1,9 @@
 #include <fcntl.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
+#include "env.h"
 #include "interpreter.h"
 #include "tokens.h"
 
@@ -34,16 +36,19 @@ main(int argc, char **argv)
                 return -1;
         }
 
+        env_create();
         if (interactive) prompt();
-        while ((n = read(fd, buf, sizeof buf - 1)) > 0) {
-                buf[n] = EOF;
+        while ((n = read(fd, buf, sizeof buf - 2)) > 0) {
+                buf[n] = 0;
+                buf[n + 1] = EOF;
                 lex_analize(buf);
-                print_tokens();
+                // print_tokens();
                 tok_parse();
-                print_ast();
+                // print_ast();
                 eval();
                 if (interactive) prompt();
         }
+        env_destroy();
         if (n < 0) {
                 report("Can not read\n");
                 return -1;

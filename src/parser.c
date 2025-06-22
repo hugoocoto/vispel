@@ -32,7 +32,7 @@ print_ast_expr_branch(Expr *e)
                 printf("%*s", indent * indent_size, "");
                 printf("- [name] %s\n", e->assignexpr.name->str_literal);
                 printf("%*s", indent * indent_size, "");
-                printf("- [value] %s\n", TOKEN_REPR[e->binexpr.op->token]);
+                printf("- [value] %s\n", TOKEN_REPR[e->assignexpr.value->type]);
                 printf("%*s", indent * indent_size, "");
                 print_ast_expr_branch(e->assignexpr.value);
                 break;
@@ -53,17 +53,17 @@ print_ast_expr_branch(Expr *e)
                 printf("- [rhs] ");
                 print_ast_expr_branch(e->unexpr.rhs);
                 break;
-        case CALLEXPR:
-                printf("[callexpr] Todo\n");
-                break;
         case LITEXPR:
                 printf("%*s", indent * indent_size, "");
                 printf("- [lit] ");
                 print_literal(e->litexpr.value);
                 printf("\n");
                 break;
+        case CALLEXPR:
         case VAREXPR:
-                printf("[varexpr] Todo\n");
+        default:
+                printf("print_ast_expr_branch not yet implemeted for %s\n",
+                       EXPR_REPR[e->type]);
                 break;
         }
 
@@ -78,6 +78,9 @@ print_ast_branch(Stmt *s)
                 print_ast_expr_branch(s->expr.body);
                 break;
         case VARDECLSTMT:
+                printf("var %s = ", s->vardecl.name->str_literal);
+                print_ast_expr_branch(s->vardecl.value);
+                break;
         case BLOCKSTMT:
         default:
                 report("No yet implemented: print_ast_branch for %s\n",
@@ -218,15 +221,13 @@ vtok *
 is_literal()
 {
         vtok *t;
-        // clang-format off
-        if ((t=match(NUMBER))
-         || (t=match(STRING))
-         || (t=match(CHAR))
-         || (t=match(IDENTIFIER))
-         || (t=match(TRUE))
-         || (t=match(FALSE)))
+        if ((t = match(NUMBER)) ||
+            (t = match(STRING)) ||
+            (t = match(CHAR)) ||
+            (t = match(IDENTIFIER)) ||
+            (t = match(TRUE)) ||
+            (t = match(FALSE)))
                 return t;
-        // clang-format on
         return NULL;
 }
 
@@ -294,14 +295,12 @@ get_comparison()
 {
         Expr *e = get_term();
         vtok *op;
-        // clang-format off
-        while ((op = match(GREATER))
-            || (op = match(GREATER_EQUAL))
-            || (op = match(LESS))
-            || (op = match(LESS_EQUAL))) {
+        while ((op = match(GREATER)) ||
+               (op = match(GREATER_EQUAL)) ||
+               (op = match(LESS)) ||
+               (op = match(LESS_EQUAL))) {
                 e = new_binexpr(e, op, get_term());
         }
-        // clang-format on
         return e;
 }
 
@@ -323,7 +322,7 @@ get_assignment()
         if ((id = match(IDENTIFIER))) {
                 if (match(EQUAL))
                         return new_assignexpr(id, get_expression());
-                current_token = current_token->prev;
+                current_token = id;
         }
         return get_equality();
 }
@@ -379,7 +378,6 @@ blockstmt_addstmt(Stmt *block, Stmt *s)
         while (current->next)
                 current = current->next;
         current->next = s;
-        s->prev = current;
 }
 
 Stmt *get_declaration();
@@ -387,17 +385,19 @@ Stmt *get_declaration();
 Stmt *
 get_program()
 {
-        Stmt *s = NULL;
-        Stmt *c;
+        printf("Calling get_program\n");
+        Stmt *c = NULL;
+        Stmt *ret;
+        Stmt *s;
         while (get_token()->token != END_OF_FILE) {
-                c = get_declaration();
-                if (s) {
-                        s->next = c;
-                        c->prev = s;
+                s = get_declaration();
+                if (c) {
+                        c->next = s;
                 } else
-                        s = c;
+                        ret = s;
+                c = s;
         }
-        return s;
+        return ret;
 }
 
 Stmt *get_vardecl();
@@ -409,6 +409,17 @@ get_declaration()
         return get_vardecl() ?: get_stmt();
 }
 
+Expr *
+littok_novalue()
+{
+        Expr *e = new_expr();
+        e->litexpr.value = calloc(1, sizeof(vtok));
+        e->litexpr.value->str_literal = "no-value";
+        e->litexpr.value->token = STRING;
+        e->type = LITEXPR;
+        return e;
+}
+
 Stmt *
 get_vardecl()
 {
@@ -418,10 +429,12 @@ get_vardecl()
         if (match(VAR) && (id = match(IDENTIFIER))) {
                 if (match(EQUAL)) {
                         value = get_expression();
-                }
+                } else
+                        value = littok_novalue();
                 expect_consume_token(SEMICOLON);
                 return new_vardecl(id, value);
         }
+        current_token = t;
         return NULL;
 }
 
@@ -467,23 +480,22 @@ tok_parse()
         head_stmt = NULL;
         current_token = head_token;
 
-        do {
-                /* Set point to reset after failure */
-                if (setjmp(panik_jmp)) {
-                        /* This is executed after failure. Go down to the
-                         * next semicolon, as current expression failed. After
-                         * the semicolon it should continue without problems. */
-                        vtok *tok;
-                        for (;;) {
-                                tok = get_token();
-                                if (tok->token == END_OF_FILE) break;
-                                consume_token();
-                                if (tok->token == SEMICOLON) break;
-                                continue;
-                        }
+        // reset_lbl:
+        /* Set point to reset after failure */
+        if (setjmp(panik_jmp)) {
+                /* This is executed after failure. Go down to the
+                 * next semicolon, as current expression failed. After
+                 * the semicolon it should continue without problems. */
+                printf("Panik mode: reset stmt\n");
+                vtok *tok;
+                for (;;) {
+                        tok = get_token();
+                        if (tok->token == END_OF_FILE) return;
+                        consume_token();
+                        if (tok->token == SEMICOLON) break;
                 }
-
-                link_stmt(get_program());
-
-        } while (0);
+                // goto reset_lbl;
+        }
+        // reset_lbl:
+        link_stmt(get_program());
 }
