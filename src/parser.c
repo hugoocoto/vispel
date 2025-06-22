@@ -5,6 +5,7 @@
  *
  * */
 
+#include <assert.h>
 #include <fcntl.h>
 #include <setjmp.h>
 #include <stdio.h>
@@ -82,6 +83,7 @@ print_ast_branch(Stmt *s)
                 print_ast_expr_branch(s->vardecl.value);
                 break;
         case BLOCKSTMT:
+        case ASSERTSTMT:
         default:
                 report("No yet implemented: print_ast_branch for %s\n",
                        STMT_REPR[s->type]);
@@ -358,6 +360,15 @@ new_exprstmt(Expr *e)
 }
 
 Stmt *
+new_assertstmt(Expr *e)
+{
+        Stmt *s = new_stmt();
+        s->type = ASSERTSTMT;
+        s->assert.body = e;
+        return s;
+}
+
+Stmt *
 new_vardecl(vtok *id, Expr *value)
 {
         Stmt *s = new_stmt();
@@ -439,11 +450,12 @@ get_vardecl()
 
 Stmt *get_block();
 Stmt *get_exprstmt();
+Stmt *get_assert();
 
 Stmt *
 get_stmt()
 {
-        return get_block() ?: get_exprstmt();
+        return (get_block() ?: get_assert()) ?: get_exprstmt();
 }
 
 Stmt *
@@ -452,6 +464,17 @@ get_exprstmt()
         Stmt *s = new_exprstmt(get_expression());
         expect_consume_token(SEMICOLON);
         return s;
+}
+
+Stmt *
+get_assert()
+{
+        if (match(ASSERT)) {
+                Stmt *s = new_assertstmt(get_expression());
+                expect_consume_token(SEMICOLON);
+                return s;
+        }
+        return NULL;
 }
 
 Stmt *

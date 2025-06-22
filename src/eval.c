@@ -219,32 +219,32 @@ eval_binexpr(Expr *e)
 
         case EQUAL_EQUAL:
                 v.type = TYPE_NUM;
-                v.num = is_equal(rhs, lhs);
+                v.num = is_equal(lhs, rhs);
                 break;
 
         case BANG_EQUAL:
                 v.type = TYPE_NUM;
-                v.num = !is_equal(rhs, lhs);
+                v.num = !is_equal(lhs, rhs);
                 break;
 
         case GREATER:
                 v.type = TYPE_NUM;
-                v.num = is_greater(rhs, lhs);
+                v.num = is_greater(lhs, rhs);
                 break;
 
         case GREATER_EQUAL:
                 v.type = TYPE_NUM;
-                v.num = is_greater_equal(rhs, lhs);
+                v.num = is_greater_equal(lhs, rhs);
                 break;
 
         case LESS:
                 v.type = TYPE_NUM;
-                v.num = !is_greater_equal(rhs, lhs);
+                v.num = !is_greater_equal(lhs, rhs);
                 break;
 
         case LESS_EQUAL:
                 v.type = TYPE_NUM;
-                v.num = !is_greater(rhs, lhs);
+                v.num = !is_greater(lhs, rhs);
                 break;
 
         default:
@@ -339,6 +339,12 @@ eval_stmt(Stmt *s)
                 v = env_add(s->vardecl.name->str_literal,
                             eval_expr(s->vardecl.value));
                 if (s->vardecl.value) return v;
+                break;
+        case ASSERTSTMT:
+                if (!is_true(eval_expr(s->assert.body))) {
+                        report("Assert failed\n");
+                        EXIT(1);
+                }
                 break;
         case BLOCKSTMT:
         default:

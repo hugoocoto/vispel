@@ -75,6 +75,7 @@ typedef enum {
         FUNC_INPUT,
         FUNC_OUTPUT,
         CHAR,
+        ASSERT,
         UNKNOWN,
 } vtoktype;
 
@@ -129,6 +130,7 @@ static const char *TOKEN_REPR[] = {
         [FUNC_INPUT] = "FUNC_INPUT",
         [FUNC_OUTPUT] = "FUNC_OUTPUT",
         [CHAR] = "CHAR",
+        [ASSERT] = "ASSERT",
         [UNKNOWN] = "UNKNOWN",
 };
 
@@ -194,12 +196,14 @@ typedef enum {
         VARDECLSTMT,
         BLOCKSTMT,
         EXPRSTMT,
+        ASSERTSTMT,
 } Stmttype;
 
 static const char *STMT_REPR[] = {
         [VARDECLSTMT] = "VARDECLSTMT",
         [BLOCKSTMT] = "BLOCKSTMT",
         [EXPRSTMT] = "EXPRSTMT",
+        [ASSERTSTMT] = "ASSERTSTMT",
 };
 
 typedef struct Stmt {
@@ -214,6 +218,9 @@ typedef struct Stmt {
                 struct {
                         Expr *body;
                 } expr;
+                struct {
+                        Expr *body;
+                } assert;
         };
         Stmttype type;
         struct Stmt *next;

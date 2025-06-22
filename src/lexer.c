@@ -383,6 +383,8 @@ lex_analize(char *source)
                                 add_token(TRUE);
                         else if (match_word("while"))
                                 add_token(WHILE);
+                        else if (match_word("assert"))
+                                add_token(ASSERT);
                         else
                                 add_token(IDENTIFIER, get_identifier());
                         // clang-format on
