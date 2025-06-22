@@ -26,6 +26,9 @@ print_val(Value v)
                 printf("%d\n", v.num);
                 break;
         case TYPE_STR:
+                /* -- TEMP -- */
+                if (strcmp("no-value", v.str) == 0) return;
+                /* ---------- */
                 printf("%s\n", v.str);
                 break;
         default:

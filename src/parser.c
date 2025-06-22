@@ -385,7 +385,6 @@ Stmt *get_declaration();
 Stmt *
 get_program()
 {
-        printf("Calling get_program\n");
         Stmt *c = NULL;
         Stmt *ret;
         Stmt *s;
@@ -480,13 +479,11 @@ tok_parse()
         head_stmt = NULL;
         current_token = head_token;
 
-        // reset_lbl:
         /* Set point to reset after failure */
         if (setjmp(panik_jmp)) {
                 /* This is executed after failure. Go down to the
                  * next semicolon, as current expression failed. After
                  * the semicolon it should continue without problems. */
-                printf("Panik mode: reset stmt\n");
                 vtok *tok;
                 for (;;) {
                         tok = get_token();
@@ -494,8 +491,6 @@ tok_parse()
                         consume_token();
                         if (tok->token == SEMICOLON) break;
                 }
-                // goto reset_lbl;
         }
-        // reset_lbl:
         link_stmt(get_program());
 }

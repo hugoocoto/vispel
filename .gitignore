@@ -2,3 +2,5 @@ src/vlex
 src/compiler
 src/log.txt
 src/repl
+src/stb_ds.h
+

@@ -1,0 +1,6 @@
+Expected LITERAL but got SEMICOLON
+Var b not declared
+Var `a` not declared
+Expected LITERAL but got SEMICOLON
+Var b not declared
+Var `a` not declared
