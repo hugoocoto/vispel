@@ -336,9 +336,8 @@ eval_stmt(Stmt *s)
                 v = eval_expr(s->expr.body);
                 break;
         case VARDECLSTMT:
-                v = env_add(s->vardecl.name->str_literal,
-                            eval_expr(s->vardecl.value));
-                if (s->vardecl.value) return v;
+                env_add(s->vardecl.name->str_literal,
+                        eval_expr(s->vardecl.value));
                 break;
         case ASSERTSTMT:
                 if (!is_true(eval_expr(s->assert.body))) {
@@ -347,6 +346,14 @@ eval_stmt(Stmt *s)
                 }
                 break;
         case BLOCKSTMT:
+                env_create();
+                Stmt *sb = s->block.body;
+                while (sb) {
+                        print_val(eval_stmt(sb));
+                        sb = sb->next;
+                }
+                env_destroy();
+                break;
         default:
                 report("Todo: eval_stmt for %s\n", STMT_REPR[s->type]);
                 EXIT(1);

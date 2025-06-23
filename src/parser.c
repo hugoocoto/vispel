@@ -482,10 +482,8 @@ get_block()
 {
         if (match(LEFT_BRACE)) {
                 Stmt *s = new_blockstmt();
-                do {
-                        blockstmt_addstmt(s, get_stmt());
-                        expect_consume_token(SEMICOLON);
-                } while (match(RIGHT_BRACE));
+                while (!match(RIGHT_BRACE))
+                        blockstmt_addstmt(s, get_declaration());
                 return s;
         }
         return NULL;
