@@ -4,3 +4,6 @@ Var `a` not declared
 Expected LITERAL but got SEMICOLON
 Var b not declared
 Var `a` not declared
+Expected LITERAL but got VAR
+Var `a` not declared
+Expected SEMICOLON but got EQUAL

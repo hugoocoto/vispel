@@ -1,9 +1,42 @@
-// comment
+var a;
+var b = 1;
+assert -1 < 0;
+assert -1 <= -1;
+assert -1 > -2;
+assert -1 >= -1;
+assert 2 == 1 + 1;
+assert -1 + -1 == -2;
+assert b == 1;
+a = b;
+assert a == b;
+assert !!true;
+a = 1;
+assert a == 1;
 
--1;
-a + 3;
-1 + 1;
--1 + -1;
-!!true;
-a + 3;
-a + 3;
+var c = 1;
+{
+        assert c == 1;
+        var c = 2;
+        assert c == 2;
+        {
+                var c = 3;
+                assert c == 3;
+        }
+        assert c == 2;
+}
+assert c == 1;
+
+c = 1;
+if (c) {
+        assert c == 1;
+        c = 2;
+}
+assert c == 2;
+
+if (c == 1 || c == 2) c = 3;
+assert c == 3;
+
+if (c == 0) { assert c; }
+else { c = 0; }
+
+assert c == 0;

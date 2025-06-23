@@ -62,6 +62,8 @@ print_ast_expr_branch(Expr *e)
                 break;
         case CALLEXPR:
         case VAREXPR:
+        case ANDEXPR:
+        case OREXPR:
         default:
                 printf("print_ast_expr_branch not yet implemeted for %s\n",
                        EXPR_REPR[e->type]);
@@ -82,8 +84,28 @@ print_ast_branch(Stmt *s)
                 printf("var %s = ", s->vardecl.name->str_literal);
                 print_ast_expr_branch(s->vardecl.value);
                 break;
-        case BLOCKSTMT:
         case ASSERTSTMT:
+                printf("assert ");
+                print_ast_expr_branch(s->assert.body);
+                break;
+        case IFSTMT:
+                printf("if ");
+                print_ast_expr_branch(s->ifstmt.cond);
+                printf("if true ");
+                print_ast_branch(s->ifstmt.body);
+                if (s->ifstmt.elsebody) {
+                        printf("if false ");
+                        print_ast_branch(s->ifstmt.elsebody);
+                }
+                break;
+        case BLOCKSTMT:
+                printf("block ");
+                s = s->block.body;
+                while (s) {
+                        print_ast_branch(s);
+                        s = s->next;
+                }
+                break;
         default:
                 report("No yet implemented: print_ast_branch for %s\n",
                        STMT_REPR[s->type]);
@@ -110,6 +132,26 @@ new_expr()
 {
         Expr *e = malloc(sizeof(Expr));
         memset(e, 0, sizeof(Expr));
+        return e;
+}
+
+Expr *
+new_orexpr(Expr *lhs, Expr *rhs)
+{
+        Expr *e = new_expr();
+        e->orexpr.lhs = lhs;
+        e->orexpr.rhs = rhs;
+        e->type = OREXPR;
+        return e;
+}
+
+Expr *
+new_andexpr(Expr *lhs, Expr *rhs)
+{
+        Expr *e = new_expr();
+        e->andexpr.lhs = lhs;
+        e->andexpr.rhs = rhs;
+        e->type = ANDEXPR;
         return e;
 }
 
@@ -318,6 +360,26 @@ get_equality()
 }
 
 Expr *
+get_or()
+{
+        Expr *e = get_equality();
+        if (match(OR)) {
+                e = new_orexpr(e, get_or());
+        }
+        return e;
+}
+
+Expr *
+get_and()
+{
+        Expr *e = get_or();
+        if (match(AND)) {
+                e = new_andexpr(e, get_and());
+        }
+        return e;
+}
+
+Expr *
 get_assignment()
 {
         vtok *id;
@@ -326,7 +388,7 @@ get_assignment()
                         return new_assignexpr(id, get_expression());
                 current_token = id;
         }
-        return get_equality();
+        return get_and();
 }
 
 Expr *
@@ -356,6 +418,17 @@ new_exprstmt(Expr *e)
         Stmt *s = new_stmt();
         s->type = EXPRSTMT;
         s->expr.body = e;
+        return s;
+}
+
+Stmt *
+new_ifstmt(Expr *e, Stmt *body, Stmt *elsebody)
+{
+        Stmt *s = new_stmt();
+        s->type = IFSTMT;
+        s->ifstmt.cond = e;
+        s->ifstmt.body = body;
+        s->ifstmt.elsebody = elsebody;
         return s;
 }
 
@@ -451,11 +524,29 @@ get_vardecl()
 Stmt *get_block();
 Stmt *get_exprstmt();
 Stmt *get_assert();
+Stmt *get_ifstmt();
 
 Stmt *
 get_stmt()
 {
-        return (get_block() ?: get_assert()) ?: get_exprstmt();
+        if (match(ASSERT)) return get_assert();
+        if (match(LEFT_BRACE)) return get_block();
+        if (match(IF)) return get_ifstmt();
+        return get_exprstmt();
+}
+
+Stmt *
+get_ifstmt()
+{
+        expect_consume_token(LEFT_PARENT);
+        Expr *e = get_expression();
+        expect_consume_token(RIGHT_PARENT);
+        Stmt *body = get_declaration();
+        Stmt *elsebody = NULL;
+        if (match(ELSE)) {
+                elsebody = get_declaration();
+        }
+        return new_ifstmt(e, body, elsebody);
 }
 
 Stmt *
@@ -469,24 +560,18 @@ get_exprstmt()
 Stmt *
 get_assert()
 {
-        if (match(ASSERT)) {
-                Stmt *s = new_assertstmt(get_expression());
-                expect_consume_token(SEMICOLON);
-                return s;
-        }
-        return NULL;
+        Stmt *s = new_assertstmt(get_expression());
+        expect_consume_token(SEMICOLON);
+        return s;
 }
 
 Stmt *
 get_block()
 {
-        if (match(LEFT_BRACE)) {
-                Stmt *s = new_blockstmt();
-                while (!match(RIGHT_BRACE))
-                        blockstmt_addstmt(s, get_declaration());
-                return s;
-        }
-        return NULL;
+        Stmt *s = new_blockstmt();
+        while (!match(RIGHT_BRACE))
+                blockstmt_addstmt(s, get_declaration());
+        return s;
 }
 
 void

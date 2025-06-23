@@ -44,7 +44,7 @@ main(int argc, char **argv)
                 lex_analize(buf);
                 // print_tokens();
                 tok_parse();
-                // print_ast();
+                print_ast();
                 eval();
                 if (interactive) prompt();
         }

@@ -165,6 +165,8 @@ typedef enum Exprtype {
         CALLEXPR,
         LITEXPR,
         VAREXPR,
+        ANDEXPR,
+        OREXPR,
 } Exprtype;
 
 // clang-format off
@@ -172,6 +174,8 @@ typedef struct Expr {
         union {
                 struct { struct Expr *value; vtok *name; } assignexpr;
                 struct { struct Expr *rhs; struct Expr *lhs; vtok *op; } binexpr;
+                struct { struct Expr *rhs; struct Expr *lhs; } andexpr;
+                struct { struct Expr *rhs; struct Expr *lhs; } orexpr;
                 struct { struct Expr *rhs; vtok *op; } unexpr;
                 struct { struct Expr **args; int count; vtok *name; } callexpr;
                 struct { struct Expr *value; vtok *name; } varexpr;
@@ -190,6 +194,8 @@ static const char *EXPR_REPR[] = {
         [CALLEXPR] = "Call",
         [LITEXPR] = "Literal",
         [VAREXPR] = "Variable",
+        [ANDEXPR] = "And",
+        [OREXPR] = "Or",
 };
 
 typedef enum {
@@ -197,6 +203,7 @@ typedef enum {
         BLOCKSTMT,
         EXPRSTMT,
         ASSERTSTMT,
+        IFSTMT,
 } Stmttype;
 
 static const char *STMT_REPR[] = {
@@ -204,6 +211,7 @@ static const char *STMT_REPR[] = {
         [BLOCKSTMT] = "BLOCKSTMT",
         [EXPRSTMT] = "EXPRSTMT",
         [ASSERTSTMT] = "ASSERTSTMT",
+        [IFSTMT] = "IFSTMT",
 };
 
 typedef struct Stmt {
@@ -218,6 +226,11 @@ typedef struct Stmt {
                 struct {
                         Expr *body;
                 } expr;
+                struct {
+                        Expr *cond;
+                        struct Stmt *body;
+                        struct Stmt *elsebody;
+                } ifstmt;
                 struct {
                         Expr *body;
                 } assert;

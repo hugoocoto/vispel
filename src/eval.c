@@ -301,6 +301,28 @@ eval_assignexpr(Expr *s)
 }
 
 Value
+eval_orexpr(Expr *e)
+{
+        Value v;
+        v = eval_expr(e->orexpr.lhs);
+        if (is_true(v)) return v;
+        v = eval_expr(e->orexpr.rhs);
+        if (is_true(v)) return v;
+        return (Value) { .num = 0, .type = TYPE_NUM };
+}
+
+Value
+eval_andexpr(Expr *e)
+{
+        Value v =
+        (Value) { .num = 0, .type = TYPE_NUM };
+        if (is_true(eval_expr(e->orexpr.lhs)) &&
+            is_true(eval_expr(e->orexpr.rhs)))
+                v.num = 1;
+        return v;
+}
+
+Value
 eval_expr(Expr *e)
 {
         Value v;
@@ -316,6 +338,12 @@ eval_expr(Expr *e)
                 break;
         case ASSIGNEXPR:
                 v = eval_assignexpr(e);
+                break;
+        case OREXPR:
+                v = eval_orexpr(e);
+                break;
+        case ANDEXPR:
+                v = eval_andexpr(e);
                 break;
         case CALLEXPR:
         case VAREXPR:
@@ -353,6 +381,13 @@ eval_stmt(Stmt *s)
                         sb = sb->next;
                 }
                 env_destroy();
+                break;
+        case IFSTMT:
+                if (is_true(eval_expr(s->ifstmt.cond))) {
+                        v = eval_stmt(s->ifstmt.body);
+                } else if (s->ifstmt.elsebody) {
+                        v = eval_stmt(s->ifstmt.elsebody);
+                }
                 break;
         default:
                 report("Todo: eval_stmt for %s\n", STMT_REPR[s->type]);
