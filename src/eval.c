@@ -106,16 +106,20 @@ is_true(Value v)
 int
 is_equal(Value v1, Value v2)
 {
-        if (v1.type != v2.type) return 0;
+        if (v1.type != v2.type) {
+                report("Type missmatch in is_equal: %s and %s\n",
+                       VALTYPE_REPR[v1.type], VALTYPE_REPR[v2.type]);
+                return 0;
+        }
 
         switch (v1.type) {
         case TYPE_NUM:
                 return v1.num == v2.num;
         case TYPE_STR:
-                return strcmp(v1.str, v2.str) == 0;
+                // return strcmp(v1.str, v2.str) == 0;
         default:
                 report("No yet implemented: is_equal for %s and %s\n",
-                       VALTYPE_REPR[v1.type], VALTYPE_REPR[v1.type]);
+                       VALTYPE_REPR[v1.type], VALTYPE_REPR[v2.type]);
                 EXIT(1);
         }
 }
@@ -123,16 +127,20 @@ is_equal(Value v1, Value v2)
 int
 is_greater(Value v1, Value v2)
 {
-        if (v1.type != v2.type) return 0;
+        if (v1.type != v2.type) {
+                report("Type missmatch in is_greater: %s and %s\n",
+                       VALTYPE_REPR[v1.type], VALTYPE_REPR[v2.type]);
+                return 0;
+        }
 
         switch (v1.type) {
         case TYPE_NUM:
                 return v1.num > v2.num;
         case TYPE_STR:
-                return strcmp(v1.str, v2.str) > 0;
+                // return strcmp(v1.str, v2.str) > 0;
         default:
                 report("No yet implemented: is_greater for %s and %s\n",
-                       VALTYPE_REPR[v1.type], VALTYPE_REPR[v1.type]);
+                       VALTYPE_REPR[v1.type], VALTYPE_REPR[v2.type]);
                 EXIT(1);
         }
 }
@@ -154,7 +162,7 @@ eval_binexpr(Expr *e)
         case MINUS:
                 if (rhs.type == TYPE_NUM && lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
-                        v.num = rhs.num - lhs.num;
+                        v.num = lhs.num - rhs.num;
                         break;
                 }
                 panik_invalid_binop(lhs, e->binexpr.op->token, rhs);
@@ -162,7 +170,7 @@ eval_binexpr(Expr *e)
         case PLUS:
                 if (rhs.type == TYPE_NUM && lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
-                        v.num = rhs.num + lhs.num;
+                        v.num = lhs.num + rhs.num;
                         break;
                 }
                 panik_invalid_binop(lhs, e->binexpr.op->token, rhs);
@@ -170,7 +178,7 @@ eval_binexpr(Expr *e)
         case SLASH:
                 if (rhs.type == TYPE_NUM && lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
-                        v.num = rhs.num / lhs.num;
+                        v.num = lhs.num / rhs.num;
                         break;
                 }
                 panik_invalid_binop(lhs, e->binexpr.op->token, rhs);
@@ -178,19 +186,19 @@ eval_binexpr(Expr *e)
         case STAR:
                 if (rhs.type == TYPE_NUM && lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
-                        v.num = rhs.num * lhs.num;
+                        v.num = lhs.num * rhs.num;
                         break;
                 }
                 panik_invalid_binop(lhs, e->binexpr.op->token, rhs);
 
         case AND:
                 v.type = TYPE_NUM;
-                v.num = is_true(rhs) && is_true(lhs);
+                v.num = is_true(lhs) && is_true(rhs);
                 break;
 
         case OR:
                 v.type = TYPE_NUM;
-                v.num = is_true(rhs) && is_true(lhs);
+                v.num = is_true(lhs) && is_true(rhs);
                 break;
 
         case BITWISE_AND:
@@ -296,8 +304,9 @@ Value eval_expr(Expr *e);
 Value
 eval_assignexpr(Expr *s)
 {
-        return env_set(s->assignexpr.name->str_literal,
-                       eval_expr(s->assignexpr.value));
+        char *name = s->assignexpr.name->str_literal;
+        Value v = eval_expr(s->assignexpr.value);
+        return env_set(name, v);
 }
 
 Value
@@ -387,6 +396,11 @@ eval_stmt(Stmt *s)
                         v = eval_stmt(s->ifstmt.body);
                 } else if (s->ifstmt.elsebody) {
                         v = eval_stmt(s->ifstmt.elsebody);
+                }
+                break;
+        case WHILESTMT:
+                while (is_true(eval_expr(s->whilestmt.cond))) {
+                        v = eval_stmt(s->whilestmt.body);
                 }
                 break;
         default:

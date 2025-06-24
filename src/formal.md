@@ -13,8 +13,9 @@ literal -> NUM | STR | CHAR | "true" | "false" | IDENTIFIER
 pogram -> declaration* EOF
 declaration -> vardecl | stmt
 vardecl -> "var" IDENTIFIER ("=" expr)? ";"
-stmt -> block | assert | exprstmt | ifstmt
+stmt -> block | assert | exprstmt | ifstmt | whilestmt
 ifstmt -> "if" "(" expr ")" declaration ("else" declaration)?
+whilestmt -> "while" "(" expr ")" declaration
 assert -> "assert" expr ";"
 exprstmt -> expr ";"
 block -> "{" (stmt ";")* "}"

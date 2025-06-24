@@ -65,7 +65,7 @@ print_ast_expr_branch(Expr *e)
         case ANDEXPR:
         case OREXPR:
         default:
-                printf("print_ast_expr_branch not yet implemeted for %s\n",
+                report("print_ast_expr_branch not yet implemeted for %s\n",
                        EXPR_REPR[e->type]);
                 break;
         }
@@ -91,10 +91,10 @@ print_ast_branch(Stmt *s)
         case IFSTMT:
                 printf("if ");
                 print_ast_expr_branch(s->ifstmt.cond);
-                printf("if true ");
+                printf("if true: ");
                 print_ast_branch(s->ifstmt.body);
                 if (s->ifstmt.elsebody) {
-                        printf("if false ");
+                        printf("if false: ");
                         print_ast_branch(s->ifstmt.elsebody);
                 }
                 break;
@@ -106,10 +106,15 @@ print_ast_branch(Stmt *s)
                         s = s->next;
                 }
                 break;
+        case WHILESTMT:
+                printf("while ");
+                print_ast_expr_branch(s->ifstmt.cond);
+                printf("body: ");
+                print_ast_branch(s->ifstmt.body);
+                break;
         default:
                 report("No yet implemented: print_ast_branch for %s\n",
                        STMT_REPR[s->type]);
-                longjmp(panik_jmp, 1);
                 break;
         }
 }
@@ -180,8 +185,8 @@ Expr *
 new_assignexpr(vtok *name, Expr *value)
 {
         Expr *e = new_expr();
-        e->assignexpr.value = value;
         e->assignexpr.name = name;
+        e->assignexpr.value = value;
         e->type = ASSIGNEXPR;
         return e;
 }
@@ -422,6 +427,16 @@ new_exprstmt(Expr *e)
 }
 
 Stmt *
+new_whilestmt(Expr *e, Stmt *body)
+{
+        Stmt *s = new_stmt();
+        s->type = WHILESTMT;
+        s->whilestmt.cond = e;
+        s->whilestmt.body = body;
+        return s;
+}
+
+Stmt *
 new_ifstmt(Expr *e, Stmt *body, Stmt *elsebody)
 {
         Stmt *s = new_stmt();
@@ -525,6 +540,7 @@ Stmt *get_block();
 Stmt *get_exprstmt();
 Stmt *get_assert();
 Stmt *get_ifstmt();
+Stmt *get_whilestmt();
 
 Stmt *
 get_stmt()
@@ -532,7 +548,17 @@ get_stmt()
         if (match(ASSERT)) return get_assert();
         if (match(LEFT_BRACE)) return get_block();
         if (match(IF)) return get_ifstmt();
+        if (match(WHILE)) return get_whilestmt();
         return get_exprstmt();
+}
+
+Stmt *
+get_whilestmt()
+{
+        expect_consume_token(LEFT_PARENT);
+        Expr *e = get_expression();
+        expect_consume_token(RIGHT_PARENT);
+        return new_whilestmt(e, get_declaration());
 }
 
 Stmt *

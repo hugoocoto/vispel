@@ -1,11 +1,13 @@
-#include "env.h"
-#include "interpreter.h"
-#include "tokens.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
+
+#include "env.h"
+#include "interpreter.h"
+#include "tokens.h"
 
 typedef struct node {
         char *key;

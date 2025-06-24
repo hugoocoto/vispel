@@ -18,5 +18,7 @@ Value eval_expr(Expr *e);
 /* Eval all expressions from parsing and print result to stdout */
 void eval();
 
+/* debug reasons */
+void print_val(Value v);
 
 #endif
