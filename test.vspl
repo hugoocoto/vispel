@@ -40,3 +40,16 @@ if (c == 0) { assert c; }
 else { c = 0; }
 
 assert c == 0;
+
+var d = 5;
+while(d > 0)
+        d = d - 1;
+
+assert d == 0;
+
+d = 5;
+while(d > 0) {
+        d = d - 1;
+}
+assert d == 0;
+

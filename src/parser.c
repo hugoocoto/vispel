@@ -13,14 +13,19 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "env.h"
 #include "tokens.h"
 
 vtok *current_token = NULL;
 Stmt *head_stmt = NULL;
 jmp_buf panik_jmp;
 
-void
+static inline void
+panik_exit()
+{
+        longjmp(panik_jmp, 1);
+}
+
+static void
 print_ast_expr_branch(Expr *e)
 {
         static int indent = 0;
@@ -73,7 +78,7 @@ print_ast_expr_branch(Expr *e)
         --indent;
 }
 
-void
+static void
 print_ast_branch(Stmt *s)
 {
         switch (s->type) {
@@ -132,7 +137,7 @@ print_ast()
 }
 
 /* Use only to create a expr of a concrete type */
-Expr *
+static Expr *
 new_expr()
 {
         Expr *e = malloc(sizeof(Expr));
@@ -140,7 +145,7 @@ new_expr()
         return e;
 }
 
-Expr *
+static Expr *
 new_orexpr(Expr *lhs, Expr *rhs)
 {
         Expr *e = new_expr();
@@ -150,7 +155,7 @@ new_orexpr(Expr *lhs, Expr *rhs)
         return e;
 }
 
-Expr *
+static Expr *
 new_andexpr(Expr *lhs, Expr *rhs)
 {
         Expr *e = new_expr();
@@ -160,7 +165,7 @@ new_andexpr(Expr *lhs, Expr *rhs)
         return e;
 }
 
-Expr *
+static Expr *
 new_binexpr(Expr *lhs, vtok *op, Expr *rhs)
 {
         Expr *e = new_expr();
@@ -171,7 +176,7 @@ new_binexpr(Expr *lhs, vtok *op, Expr *rhs)
         return e;
 }
 
-Expr *
+static Expr *
 new_unexpr(vtok *op, Expr *rhs)
 {
         Expr *e = new_expr();
@@ -181,7 +186,7 @@ new_unexpr(vtok *op, Expr *rhs)
         return e;
 }
 
-Expr *
+static Expr *
 new_assignexpr(vtok *name, Expr *value)
 {
         Expr *e = new_expr();
@@ -191,7 +196,7 @@ new_assignexpr(vtok *name, Expr *value)
         return e;
 }
 
-Expr *
+static Expr *
 new_litexpr(vtok *value)
 {
         Expr *e = new_expr();
@@ -200,28 +205,20 @@ new_litexpr(vtok *value)
         return e;
 }
 
-vtok *
+static vtok *
 get_token()
 {
         return current_token;
 }
 
-vtok *
+static vtok *
 consume_token()
 {
         if (current_token) current_token = current_token->next;
         return current_token;
 }
 
-vtok *
-get_consume_token()
-{
-        vtok *tok = get_token();
-        consume_token();
-        return tok;
-}
-
-vtok *
+static vtok *
 match(vtoktype token)
 {
         vtok *tok = get_token();
@@ -233,16 +230,26 @@ match(vtoktype token)
 }
 
 void
+report_expected_token(const char *expected, const char *current, vtok *position)
+{
+        if (!position) {
+                report("Expected %s but got %s at line %d, offset %s\n",
+                       expected, current, position->line, position->offset);
+                return;
+        }
+}
+
+static void
 expect_token(vtoktype expected)
 {
         vtok *tok = get_token();
         if (tok->token != expected) {
-                report("Expected %s but got %s\n", TOKEN_REPR[expected], TOKEN_REPR[tok->token]);
-                longjmp(panik_jmp, 1);
+                report_expected_token(TOKEN_REPR[expected], TOKEN_REPR[tok->token], tok);
+                panik_exit();
         }
 }
 
-void
+static void
 expect_consume_token(vtoktype expected)
 {
         /* I add EOF here so I can evaluate a single expression witout
@@ -253,7 +260,7 @@ expect_consume_token(vtoktype expected)
         consume_token();
 }
 
-void
+static void
 link_stmt(Stmt *s)
 {
         if (head_stmt == NULL) {
@@ -266,7 +273,7 @@ link_stmt(Stmt *s)
         last->next = s;
 }
 
-vtok *
+static vtok *
 is_literal()
 {
         vtok *t;
@@ -280,7 +287,7 @@ is_literal()
         return NULL;
 }
 
-Expr *
+static Expr *
 get_literal()
 {
         vtok *t;
@@ -288,14 +295,14 @@ get_literal()
                 return new_litexpr(t);
         }
         /* can't be used expect() because LITERAL is an expression, not a token */
-        report("Expected LITERAL but got %s\n", TOKEN_REPR[get_token()->token]);
-        longjmp(panik_jmp, 1);
+        report_expected_token("LITERAL", TOKEN_REPR[get_token()->token], t);
+        panik_exit();
         return NULL;
 }
 
 Expr *get_expression();
 
-Expr *
+static Expr *
 get_group()
 {
         Expr *e;
@@ -307,7 +314,7 @@ get_group()
         return get_literal();
 }
 
-Expr *
+static Expr *
 get_unary()
 {
         vtok *op;
@@ -317,7 +324,7 @@ get_unary()
                 return get_group();
 }
 
-Expr *
+static Expr *
 get_factor()
 {
         Expr *e = get_unary();
@@ -328,7 +335,7 @@ get_factor()
         return e;
 }
 
-Expr *
+static Expr *
 get_term()
 {
         Expr *e = get_factor();
@@ -339,7 +346,7 @@ get_term()
         return e;
 }
 
-Expr *
+static Expr *
 get_comparison()
 {
         Expr *e = get_term();
@@ -353,7 +360,7 @@ get_comparison()
         return e;
 }
 
-Expr *
+static Expr *
 get_equality()
 {
         Expr *e = get_comparison();
@@ -364,7 +371,7 @@ get_equality()
         return e;
 }
 
-Expr *
+static Expr *
 get_or()
 {
         Expr *e = get_equality();
@@ -374,7 +381,7 @@ get_or()
         return e;
 }
 
-Expr *
+static Expr *
 get_and()
 {
         Expr *e = get_or();
@@ -384,7 +391,7 @@ get_and()
         return e;
 }
 
-Expr *
+static Expr *
 get_assignment()
 {
         vtok *id;
@@ -402,13 +409,13 @@ get_expression()
         return get_assignment();
 }
 
-Stmt *
+static Stmt *
 new_stmt()
 {
         return calloc(1, sizeof(Stmt));
 }
 
-Stmt *
+static Stmt *
 new_blockstmt()
 {
         Stmt *s = new_stmt();
@@ -417,7 +424,7 @@ new_blockstmt()
         return s;
 }
 
-Stmt *
+static Stmt *
 new_exprstmt(Expr *e)
 {
         Stmt *s = new_stmt();
@@ -426,7 +433,7 @@ new_exprstmt(Expr *e)
         return s;
 }
 
-Stmt *
+static Stmt *
 new_whilestmt(Expr *e, Stmt *body)
 {
         Stmt *s = new_stmt();
@@ -436,7 +443,7 @@ new_whilestmt(Expr *e, Stmt *body)
         return s;
 }
 
-Stmt *
+static Stmt *
 new_ifstmt(Expr *e, Stmt *body, Stmt *elsebody)
 {
         Stmt *s = new_stmt();
@@ -447,7 +454,7 @@ new_ifstmt(Expr *e, Stmt *body, Stmt *elsebody)
         return s;
 }
 
-Stmt *
+static Stmt *
 new_assertstmt(Expr *e)
 {
         Stmt *s = new_stmt();
@@ -456,7 +463,7 @@ new_assertstmt(Expr *e)
         return s;
 }
 
-Stmt *
+static Stmt *
 new_vardecl(vtok *id, Expr *value)
 {
         Stmt *s = new_stmt();
@@ -466,7 +473,7 @@ new_vardecl(vtok *id, Expr *value)
         return s;
 }
 
-void
+static void
 blockstmt_addstmt(Stmt *block, Stmt *s)
 {
         if (block->block.body == NULL) {
@@ -479,9 +486,9 @@ blockstmt_addstmt(Stmt *block, Stmt *s)
         current->next = s;
 }
 
-Stmt *get_declaration();
+static Stmt *get_declaration();
 
-Stmt *
+static Stmt *
 get_program()
 {
         Stmt *c = NULL;
@@ -498,16 +505,16 @@ get_program()
         return ret;
 }
 
-Stmt *get_vardecl();
-Stmt *get_stmt();
+static Stmt *get_vardecl();
+static Stmt *get_stmt();
 
-Stmt *
+static Stmt *
 get_declaration()
 {
         return get_vardecl() ?: get_stmt();
 }
 
-Expr *
+static Expr *
 littok_novalue()
 {
         Expr *e = new_expr();
@@ -518,7 +525,7 @@ littok_novalue()
         return e;
 }
 
-Stmt *
+static Stmt *
 get_vardecl()
 {
         vtok *t = current_token;
@@ -536,13 +543,13 @@ get_vardecl()
         return NULL;
 }
 
-Stmt *get_block();
-Stmt *get_exprstmt();
-Stmt *get_assert();
-Stmt *get_ifstmt();
-Stmt *get_whilestmt();
+static Stmt *get_block();
+static Stmt *get_exprstmt();
+static Stmt *get_assert();
+static Stmt *get_ifstmt();
+static Stmt *get_whilestmt();
 
-Stmt *
+static Stmt *
 get_stmt()
 {
         if (match(ASSERT)) return get_assert();
@@ -552,7 +559,7 @@ get_stmt()
         return get_exprstmt();
 }
 
-Stmt *
+static Stmt *
 get_whilestmt()
 {
         expect_consume_token(LEFT_PARENT);
@@ -561,7 +568,7 @@ get_whilestmt()
         return new_whilestmt(e, get_declaration());
 }
 
-Stmt *
+static Stmt *
 get_ifstmt()
 {
         expect_consume_token(LEFT_PARENT);
@@ -575,7 +582,7 @@ get_ifstmt()
         return new_ifstmt(e, body, elsebody);
 }
 
-Stmt *
+static Stmt *
 get_exprstmt()
 {
         Stmt *s = new_exprstmt(get_expression());
@@ -583,7 +590,7 @@ get_exprstmt()
         return s;
 }
 
-Stmt *
+static Stmt *
 get_assert()
 {
         Stmt *s = new_assertstmt(get_expression());
@@ -591,7 +598,7 @@ get_assert()
         return s;
 }
 
-Stmt *
+static Stmt *
 get_block()
 {
         Stmt *s = new_blockstmt();

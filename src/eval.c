@@ -7,19 +7,25 @@
 
 #include <setjmp.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "env.h"
 #include "interpreter.h"
+
 #include "tokens.h"
 
 jmp_buf eval_runtime_error;
 
-/* should return to repr. Now it does nothing */
-#define EXIT(X) longjmp(eval_runtime_error, 1)
+#define NO_VALUE ((Value) { .type = TYPE_STR, .str = "no-value" })
 
-void
+static inline _Noreturn void
+runtime_error()
+{
+        longjmp(eval_runtime_error, 1);
+}
+
+
+static void
 print_val(Value v)
 {
         switch (v.type) {
@@ -35,11 +41,11 @@ print_val(Value v)
         default:
                 report("No yet implemented: print_val for %s\n",
                        VALTYPE_REPR[v.type]);
-                EXIT(1);
+                runtime_error();
         }
 }
 
-Value
+static Value
 eval_litexpr(Expr *e)
 {
         Value v;
@@ -67,28 +73,28 @@ eval_litexpr(Expr *e)
         default:
                 report("No yet implemented: eval_litexpr for %s\n",
                        TOKEN_REPR[e->litexpr.value->token]);
-                EXIT(1);
+                runtime_error();
         }
         return v;
 }
 
-void
+static _Noreturn void
 panik_invalid_binop(Value L, vtoktype OP, Value R)
 {
         report("Invalid binary operation %s between %s and %s\n",
                TOKEN_REPR[OP], VALTYPE_REPR[L.type], VALTYPE_REPR[R.type]);
-        EXIT(1);
+        runtime_error();
 }
 
-void
+static _Noreturn void
 panik_invalid_unop(vtoktype OP, Value R)
 {
         report("Invalid binary operation %s for %s\n",
                TOKEN_REPR[OP], VALTYPE_REPR[R.type]);
-        EXIT(1);
+        runtime_error();
 }
 
-int
+static int
 is_true(Value v)
 {
         switch (v.type) {
@@ -99,11 +105,11 @@ is_true(Value v)
         default:
                 report("No yet implemented: is_true for %s\n",
                        VALTYPE_REPR[v.type]);
-                EXIT(1);
+                runtime_error();
         }
 }
 
-int
+static int
 is_equal(Value v1, Value v2)
 {
         if (v1.type != v2.type) {
@@ -120,11 +126,11 @@ is_equal(Value v1, Value v2)
         default:
                 report("No yet implemented: is_equal for %s and %s\n",
                        VALTYPE_REPR[v1.type], VALTYPE_REPR[v2.type]);
-                EXIT(1);
+                runtime_error();
         }
 }
 
-int
+static int
 is_greater(Value v1, Value v2)
 {
         if (v1.type != v2.type) {
@@ -141,17 +147,17 @@ is_greater(Value v1, Value v2)
         default:
                 report("No yet implemented: is_greater for %s and %s\n",
                        VALTYPE_REPR[v1.type], VALTYPE_REPR[v2.type]);
-                EXIT(1);
+                runtime_error();
         }
 }
 
-int
+static int
 is_greater_equal(Value v1, Value v2)
 {
         return is_equal(v1, v2) || is_greater(v1, v2);
 }
 
-Value
+static Value
 eval_binexpr(Expr *e)
 {
         Value v;
@@ -258,12 +264,12 @@ eval_binexpr(Expr *e)
         default:
                 report("Binexpr Operation no yet implemented: %s\n",
                        TOKEN_REPR[e->litexpr.value->token]);
-                EXIT(1);
+                runtime_error();
         }
         return v;
 }
 
-Value
+static Value
 eval_unexpr(Expr *e)
 {
         Value v;
@@ -274,7 +280,6 @@ eval_unexpr(Expr *e)
                 v.type = TYPE_NUM;
                 v.num = !is_true(lhs);
                 break;
-
         case MINUS:
                 if (lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
@@ -282,7 +287,6 @@ eval_unexpr(Expr *e)
                         break;
                 }
                 panik_invalid_unop(e->unexpr.op->token, lhs);
-
         case BITWISE_NOT:
                 if (lhs.type == TYPE_NUM) {
                         v.type = TYPE_NUM;
@@ -290,18 +294,17 @@ eval_unexpr(Expr *e)
                         break;
                 }
                 panik_invalid_unop(e->unexpr.op->token, lhs);
-
         default:
                 report("unexpr operation no yet implemented: %s\n",
                        TOKEN_REPR[e->litexpr.value->token]);
-                EXIT(1);
+                runtime_error();
         }
         return v;
 }
 
 Value eval_expr(Expr *e);
 
-Value
+static Value
 eval_assignexpr(Expr *s)
 {
         char *name = s->assignexpr.name->str_literal;
@@ -309,7 +312,7 @@ eval_assignexpr(Expr *s)
         return env_set(name, v);
 }
 
-Value
+static Value
 eval_orexpr(Expr *e)
 {
         Value v;
@@ -320,7 +323,7 @@ eval_orexpr(Expr *e)
         return (Value) { .num = 0, .type = TYPE_NUM };
 }
 
-Value
+static Value
 eval_andexpr(Expr *e)
 {
         Value v =
@@ -334,44 +337,37 @@ eval_andexpr(Expr *e)
 Value
 eval_expr(Expr *e)
 {
-        Value v;
         switch (e->type) {
         case LITEXPR:
-                v = eval_litexpr(e);
-                break;
+                return eval_litexpr(e);
         case BINEXPR:
-                v = eval_binexpr(e);
-                break;
+                return eval_binexpr(e);
         case UNEXPR:
-                v = eval_unexpr(e);
-                break;
+                return eval_unexpr(e);
         case ASSIGNEXPR:
-                v = eval_assignexpr(e);
-                break;
+                return eval_assignexpr(e);
         case OREXPR:
-                v = eval_orexpr(e);
-                break;
+                return eval_orexpr(e);
         case ANDEXPR:
-                v = eval_andexpr(e);
-                break;
+                return eval_andexpr(e);
         case CALLEXPR:
         case VAREXPR:
         default:
                 report("No yet implemented: eval_expr for %s\n", EXPR_REPR[e->type]);
-                EXIT(1);
+                runtime_error();
                 break;
         }
-        return v;
+        return NO_VALUE;
 }
 
-Value
+static Value eval_stmt_arr(Stmt *s);
+
+static Value
 eval_stmt(Stmt *s)
 {
-        Value v = (Value) { .type = TYPE_STR, .str = "no-value" };
         switch (s->type) {
         case EXPRSTMT:
-                v = eval_expr(s->expr.body);
-                break;
+                return eval_expr(s->expr.body);
         case VARDECLSTMT:
                 env_add(s->vardecl.name->str_literal,
                         eval_expr(s->vardecl.value));
@@ -379,47 +375,50 @@ eval_stmt(Stmt *s)
         case ASSERTSTMT:
                 if (!is_true(eval_expr(s->assert.body))) {
                         report("Assert failed\n");
-                        EXIT(1);
+                        runtime_error();
                 }
                 break;
         case BLOCKSTMT:
                 env_create();
-                Stmt *sb = s->block.body;
-                while (sb) {
-                        print_val(eval_stmt(sb));
-                        sb = sb->next;
-                }
+                eval_stmt_arr(s->block.body);
                 env_destroy();
                 break;
         case IFSTMT:
                 if (is_true(eval_expr(s->ifstmt.cond))) {
-                        v = eval_stmt(s->ifstmt.body);
+                        eval_stmt(s->ifstmt.body);
                 } else if (s->ifstmt.elsebody) {
-                        v = eval_stmt(s->ifstmt.elsebody);
+                        eval_stmt(s->ifstmt.elsebody);
                 }
                 break;
         case WHILESTMT:
                 while (is_true(eval_expr(s->whilestmt.cond))) {
-                        v = eval_stmt(s->whilestmt.body);
+                        eval_stmt(s->whilestmt.body);
                 }
                 break;
         default:
                 report("Todo: eval_stmt for %s\n", STMT_REPR[s->type]);
-                EXIT(1);
+                runtime_error();
                 break;
         }
-        return v;
+        return NO_VALUE;
 }
 
-void
-eval()
+static Value
+eval_stmt_arr(Stmt *s)
 {
-        Stmt *s = head_stmt;
+        Value v = NO_VALUE;
         if (setjmp(eval_runtime_error)) {
                 s = s->next;
         }
         while (s) {
-                print_val(eval_stmt(s));
+                v = eval_stmt(s);
                 s = s->next;
         }
+        return v;
+}
+
+inline void
+eval()
+{
+        print_val(eval_stmt_arr(head_stmt));
 }

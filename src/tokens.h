@@ -216,45 +216,32 @@ static const char *STMT_REPR[] = {
         [WHILESTMT] = "WHILE",
 };
 
+// clang-format off
 typedef struct Stmt {
         union {
-                struct {
-                        vtok *name;
-                        Expr *value;
-                } vardecl;
-                struct {
-                        struct Stmt *body;
-                } block;
-                struct {
-                        Expr *body;
-                } expr;
-                struct {
-                        Expr *cond;
-                        struct Stmt *body;
-                        struct Stmt *elsebody;
-                } ifstmt;
-                struct {
-                        Expr *cond;
-                        struct Stmt *body;
-                } whilestmt;
-                struct {
-                        Expr *body;
-                } assert;
+                struct { vtok *name; Expr *value; } vardecl;
+                struct { struct Stmt *body; } block;
+                struct { Expr *body; } expr;
+                struct { Expr *cond; struct Stmt *body; struct Stmt *elsebody; } ifstmt;
+                struct { Expr *cond; struct Stmt *body; } whilestmt;
+                struct { Expr *body; } assert;
         };
         Stmttype type;
         struct Stmt *next;
 } Stmt;
+// clang-format on
 
 extern vtok *head_token;
 extern Stmt *head_stmt;
 
-/* Get source code as a string and return a linked list of tokens */
+/* ./lexer.c */
 void lex_analize(char *source);
-
-/* Print the list of tokens */
 void print_tokens();
+
+// needed in parser
 void print_literal(vtok *tok);
 
+/* ./parser.c */
 void tok_parse();
 void print_ast();
 
