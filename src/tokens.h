@@ -134,17 +134,6 @@ static const char *TOKEN_REPR[] = {
         [UNKNOWN] = "UNKNOWN",
 };
 
-typedef enum Valtype {
-        TYPE_NUM,
-        TYPE_STR,
-} Valtype;
-
-static const char *VALTYPE_REPR[] = {
-        [TYPE_NUM] = "NUMBER",
-        [TYPE_STR] = "STRING",
-};
-
-
 typedef struct vtok {
         vtoktype token;
         const char *lexeme;
@@ -170,14 +159,14 @@ typedef enum Exprtype {
 } Exprtype;
 
 static const char *EXPR_REPR[] = {
-        [ASSIGNEXPR] = "Assign",
-        [BINEXPR] = "Binary",
-        [UNEXPR] = "Unary",
-        [CALLEXPR] = "Call",
-        [LITEXPR] = "Literal",
-        [VAREXPR] = "Variable",
-        [ANDEXPR] = "And",
-        [OREXPR] = "Or",
+        [ASSIGNEXPR] = "ASSIGNEXPR",
+        [BINEXPR] = "BINEXPR",
+        [UNEXPR] = "UNEXPR",
+        [CALLEXPR] = "CALLEXPR",
+        [LITEXPR] = "LITEXPR",
+        [VAREXPR] = "VAREXPR",
+        [ANDEXPR] = "ANDEXPR",
+        [OREXPR] = "OREXPR",
 };
 
 // clang-format off
@@ -188,7 +177,7 @@ typedef struct Expr {
                 struct { struct Expr *rhs; struct Expr *lhs; } andexpr;
                 struct { struct Expr *rhs; struct Expr *lhs; } orexpr;
                 struct { struct Expr *rhs; vtok *op; } unexpr;
-                struct { struct Expr **args; int count; vtok *name; } callexpr;
+                struct { struct Expr *args; int count; struct Expr *name; } callexpr;
                 struct { struct Expr *value; vtok *name; } varexpr;
                 struct { vtok *value; } litexpr;
         };
@@ -205,6 +194,7 @@ typedef enum {
         ASSERTSTMT,
         IFSTMT,
         WHILESTMT,
+        FUNDECLSTMT,
 } Stmttype;
 
 static const char *STMT_REPR[] = {
@@ -213,7 +203,8 @@ static const char *STMT_REPR[] = {
         [EXPRSTMT] = "EXPRSTMT",
         [ASSERTSTMT] = "ASSERTSTMT",
         [IFSTMT] = "IFSTMT",
-        [WHILESTMT] = "WHILE",
+        [WHILESTMT] = "WHILESTMT",
+        [FUNDECLSTMT] = "FUNDECLSTMT",
 };
 
 // clang-format off
@@ -225,6 +216,7 @@ typedef struct Stmt {
                 struct { Expr *cond; struct Stmt *body; struct Stmt *elsebody; } ifstmt;
                 struct { Expr *cond; struct Stmt *body; } whilestmt;
                 struct { Expr *body; } assert;
+                struct { vtok *name; Expr *args; int arity; struct Stmt *body; } funcdecl;
         };
         Stmttype type;
         struct Stmt *next;

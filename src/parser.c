@@ -13,6 +13,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "interpreter.h"
 #include "tokens.h"
 
 vtok *current_token = NULL;
@@ -66,6 +67,18 @@ print_ast_expr_branch(Expr *e)
                 printf("\n");
                 break;
         case CALLEXPR:
+                printf("%*s", indent * indent_size, "");
+                printf("- [CALL] name: ");
+                print_ast_expr_branch(e->callexpr.name);
+                Expr *ex = e->callexpr.args;
+                while (ex) {
+                        printf("%*s", indent * indent_size, "");
+                        printf("- [Param] ");
+                        print_ast_expr_branch(ex);
+                        ex = ex->next;
+                }
+                printf("\n");
+                break;
         case VAREXPR:
         case ANDEXPR:
         case OREXPR:
@@ -110,12 +123,23 @@ print_ast_branch(Stmt *s)
                         print_ast_branch(s);
                         s = s->next;
                 }
+                printf("\n");
                 break;
         case WHILESTMT:
                 printf("while ");
                 print_ast_expr_branch(s->ifstmt.cond);
                 printf("body: ");
                 print_ast_branch(s->ifstmt.body);
+                break;
+        case FUNDECLSTMT:
+                printf("Function %s (\n", s->funcdecl.name->str_literal);
+                Expr *ex = s->funcdecl.args;
+                while (ex) {
+                        print_ast_expr_branch(ex);
+                        ex = ex->next;
+                }
+                printf(")\n");
+                print_ast_branch(s->funcdecl.body);
                 break;
         default:
                 report("No yet implemented: print_ast_branch for %s\n",
@@ -176,6 +200,30 @@ new_binexpr(Expr *lhs, vtok *op, Expr *rhs)
         return e;
 }
 
+static void
+append_arg(Expr **arg, Expr *new)
+{
+        if (*arg == NULL) {
+                *arg = new;
+                return;
+        }
+        Expr *e = *arg;
+        while (e->next)
+                e = e->next;
+        e->next = new;
+}
+
+static Expr *
+new_call(Expr *name, Expr *arg, int argc)
+{
+        Expr *e = new_expr();
+        e->callexpr.name = name;
+        e->callexpr.args = arg;
+        e->callexpr.count = argc;
+        e->type = CALLEXPR;
+        return e;
+}
+
 static Expr *
 new_unexpr(vtok *op, Expr *rhs)
 {
@@ -229,34 +277,48 @@ match(vtoktype token)
         return NULL;
 }
 
-void
-report_expected_token(const char *expected, const char *current, vtok *position)
+static void
+report_expected_token(const char *expected, const char *current, vtok *pos)
 {
-        if (!position) {
-                report("Expected %s but got %s at line %d, offset %s\n",
-                       expected, current, position->line, position->offset);
-                return;
-        }
+        report("Expected %s but got %s ", expected, current);
+        if (pos)
+                report("at line %d, offset %lu", pos->line, pos->offset);
+        printf("\n");
+        return;
 }
 
-static void
-expect_token(vtoktype expected)
+static vtok *
+get_expect_consume(vtoktype expected)
 {
         vtok *tok = get_token();
         if (tok->token != expected) {
-                report_expected_token(TOKEN_REPR[expected], TOKEN_REPR[tok->token], tok);
+                report_expected_token(TOKEN_REPR[expected],
+                                      TOKEN_REPR[tok->token], tok);
+                panik_exit();
+        }
+        consume_token();
+        return tok;
+}
+
+static void
+expect(vtoktype expected)
+{
+        vtok *tok = get_token();
+        if (tok->token != expected) {
+                report_expected_token(TOKEN_REPR[expected],
+                                      TOKEN_REPR[tok->token], tok);
                 panik_exit();
         }
 }
 
 static void
-expect_consume_token(vtoktype expected)
+expect_consume(vtoktype expected)
 {
         /* I add EOF here so I can evaluate a single expression witout
          * provide the semicolon.
          * This is not a feature, but a humman-bug fix */
         if (expected == SEMICOLON && get_token()->token == END_OF_FILE) return;
-        expect_token(expected);
+        expect(expected);
         consume_token();
 }
 
@@ -308,10 +370,34 @@ get_group()
         Expr *e;
         if (match(LEFT_PARENT)) {
                 e = get_expression();
-                expect_consume_token(RIGHT_PARENT);
+                expect_consume(RIGHT_PARENT);
                 return e;
         }
         return get_literal();
+}
+
+#define MAX_ARGC 3
+static Expr *
+get_call()
+{
+        Expr *e = get_group();
+        if (match(LEFT_PARENT)) {
+                int argc = 0;
+                Expr *arg = NULL;
+                while (!match(RIGHT_PARENT)) {
+                        if (argc > 0) expect_consume(COMMA);
+                        append_arg(&arg, get_expression());
+                        ++argc;
+                        // if (argc > MAX_ARGC) {
+                        //         report("Too much arguments! "
+                        //                "Implementation only support %d\n",
+                        //                MAX_ARGC);
+                        //         panik_exit();
+                        // }
+                }
+                return new_call(e, arg, argc);
+        }
+        return e;
 }
 
 static Expr *
@@ -321,7 +407,7 @@ get_unary()
         if ((op = match(MINUS)) || (op = match(BANG))) {
                 return new_unexpr(op, get_unary());
         } else
-                return get_group();
+                return get_call();
 }
 
 static Expr *
@@ -397,7 +483,7 @@ get_assignment()
         vtok *id;
         if ((id = match(IDENTIFIER))) {
                 if (match(EQUAL))
-                        return new_assignexpr(id, get_expression());
+                        return new_assignexpr(id, get_assignment());
                 current_token = id;
         }
         return get_and();
@@ -455,6 +541,18 @@ new_ifstmt(Expr *e, Stmt *body, Stmt *elsebody)
 }
 
 static Stmt *
+new_funcdecl(vtok *name, Expr *arg, int arity, Stmt *body)
+{
+        Stmt *s = new_stmt();
+        s->type = FUNDECLSTMT;
+        s->funcdecl.name = name;
+        s->funcdecl.args = arg;
+        s->funcdecl.arity = arity;
+        s->funcdecl.body = body;
+        return s;
+}
+
+static Stmt *
 new_assertstmt(Expr *e)
 {
         Stmt *s = new_stmt();
@@ -506,12 +604,15 @@ get_program()
 }
 
 static Stmt *get_vardecl();
+static Stmt *get_funcdecl();
 static Stmt *get_stmt();
 
 static Stmt *
 get_declaration()
 {
-        return get_vardecl() ?: get_stmt();
+        if (match(VAR)) return get_vardecl();
+        if (match(FUNCTION)) return get_funcdecl();
+        return get_stmt();
 }
 
 static Expr *
@@ -528,19 +629,34 @@ littok_novalue()
 static Stmt *
 get_vardecl()
 {
-        vtok *t = current_token;
-        vtok *id;
         Expr *value = NULL;
-        if (match(VAR) && (id = match(IDENTIFIER))) {
-                if (match(EQUAL)) {
-                        value = get_expression();
-                } else
-                        value = littok_novalue();
-                expect_consume_token(SEMICOLON);
-                return new_vardecl(id, value);
+        vtok *id = get_expect_consume(IDENTIFIER);
+        if (match(EQUAL)) {
+                value = get_expression();
+        } else
+                value = littok_novalue();
+        expect_consume(SEMICOLON);
+        return new_vardecl(id, value);
+}
+
+static Stmt *get_block();
+
+static Stmt *
+get_funcdecl()
+{
+        // func a(a, b) {
+        // }
+        Expr *args = NULL;
+        int argc = 0;
+        vtok *id = get_expect_consume(IDENTIFIER);
+        expect_consume(LEFT_PARENT);
+        while (!match(RIGHT_PARENT)) {
+                if (argc > 0) expect_consume(COMMA);
+                append_arg(&args, get_expression());
+                ++argc;
         }
-        current_token = t;
-        return NULL;
+        expect_consume(LEFT_BRACE);
+        return new_funcdecl(id, args, argc, get_block());
 }
 
 static Stmt *get_block();
@@ -562,18 +678,18 @@ get_stmt()
 static Stmt *
 get_whilestmt()
 {
-        expect_consume_token(LEFT_PARENT);
+        expect_consume(LEFT_PARENT);
         Expr *e = get_expression();
-        expect_consume_token(RIGHT_PARENT);
+        expect_consume(RIGHT_PARENT);
         return new_whilestmt(e, get_declaration());
 }
 
 static Stmt *
 get_ifstmt()
 {
-        expect_consume_token(LEFT_PARENT);
+        expect_consume(LEFT_PARENT);
         Expr *e = get_expression();
-        expect_consume_token(RIGHT_PARENT);
+        expect_consume(RIGHT_PARENT);
         Stmt *body = get_declaration();
         Stmt *elsebody = NULL;
         if (match(ELSE)) {
@@ -586,7 +702,7 @@ static Stmt *
 get_exprstmt()
 {
         Stmt *s = new_exprstmt(get_expression());
-        expect_consume_token(SEMICOLON);
+        expect_consume(SEMICOLON);
         return s;
 }
 
@@ -594,7 +710,7 @@ static Stmt *
 get_assert()
 {
         Stmt *s = new_assertstmt(get_expression());
-        expect_consume_token(SEMICOLON);
+        expect_consume(SEMICOLON);
         return s;
 }
 

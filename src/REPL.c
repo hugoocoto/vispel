@@ -42,9 +42,9 @@ main(int argc, char **argv)
                 buf[n] = 0;
                 buf[n + 1] = EOF;
                 lex_analize(buf);
-                // print_tokens();
+                print_tokens();
                 tok_parse();
-                // print_ast();
+                print_ast();
                 eval();
                 if (interactive) prompt();
         }

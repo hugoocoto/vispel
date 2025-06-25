@@ -6,16 +6,18 @@ equality -> comparison (("!=" | "==") comparison)*
 comparison -> term ((">" | ">=" | "<" | "<=") term)*
 term -> factor (("-" | "+") factor)*
 factor -> unary (("/" | "\*") unary)*
-unary -> ("!" | "-") unary | group
+unary -> ("!" | "-") unary | call
+call -> group "(" expr? ("," expr)* ")"
 group -> "(" expr ")" | literal
 literal -> NUM | STR | CHAR | "true" | "false" | IDENTIFIER
 
 pogram -> declaration* EOF
-declaration -> vardecl | stmt
+declaration -> vardecl | funcdecl | stmt
 vardecl -> "var" IDENTIFIER ("=" expr)? ";"
-stmt -> block | assert | exprstmt | ifstmt | whilestmt
-ifstmt -> "if" "(" expr ")" declaration ("else" declaration)?
-whilestmt -> "while" "(" expr ")" declaration
+funcdecl -> "fun" IDENTIFIER "(" expr? ("," expr)* ")" block
+stmt -> block | assert | exprstmt | if | while
+if -> "if" "(" expr ")" declaration ("else" declaration)?
+while -> "while" "(" expr ")" declaration
 assert -> "assert" expr ";"
 exprstmt -> expr ";"
 block -> "{" (stmt ";")* "}"

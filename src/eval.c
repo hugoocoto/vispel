@@ -7,11 +7,11 @@
 
 #include <setjmp.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "env.h"
 #include "interpreter.h"
-
 #include "tokens.h"
 
 jmp_buf eval_runtime_error;
@@ -326,8 +326,7 @@ eval_orexpr(Expr *e)
 static Value
 eval_andexpr(Expr *e)
 {
-        Value v =
-        (Value) { .num = 0, .type = TYPE_NUM };
+        Value v = (Value) { .num = 0, .type = TYPE_NUM };
         if (is_true(eval_expr(e->orexpr.lhs)) &&
             is_true(eval_expr(e->orexpr.rhs)))
                 v.num = 1;
@@ -362,6 +361,38 @@ eval_expr(Expr *e)
 
 static Value eval_stmt_arr(Stmt *s);
 
+static ValueNode *
+new_valuenode()
+{
+        return calloc(1, sizeof(ValueNode));
+}
+
+static ValueNode *
+parse_params(Expr *e)
+{
+        ValueNode *vn = new_valuenode();
+        ValueNode *v = vn;
+        while (e) {
+                v->v = eval_expr(e);
+                v->next = new_valuenode();
+                v = v->next;
+                e = e->next;
+        }
+        return vn;
+}
+
+static void
+eval_funcdeclstmt(Stmt *s)
+{
+        Value v;
+        v.type = TYPE_CALLABLE;
+        v.call.arity = s->funcdecl.arity;
+        v.call.params = parse_params(s->funcdecl.args);
+        v.call.name = s->funcdecl.name->str_literal;
+        v.call.body = s->funcdecl.body;
+        env_add(s->funcdecl.name->str_literal, v);
+}
+
 static Value
 eval_stmt(Stmt *s)
 {
@@ -372,6 +403,8 @@ eval_stmt(Stmt *s)
                 env_add(s->vardecl.name->str_literal,
                         eval_expr(s->vardecl.value));
                 break;
+        case FUNDECLSTMT:
+                eval_funcdeclstmt(s);
         case ASSERTSTMT:
                 if (!is_true(eval_expr(s->assert.body))) {
                         report("Assert failed\n");

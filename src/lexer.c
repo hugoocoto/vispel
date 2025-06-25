@@ -374,7 +374,7 @@ lex_analize(char *source)
                                 add_token(ELSE);
                         else if (match_word("false"))
                                 add_token(FALSE);
-                        else if (match_word("function"))
+                        else if (match_word("func"))
                                 add_token(FUNCTION);
                         else if (match_word("var"))
                                 add_token(VAR);
