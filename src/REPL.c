@@ -37,14 +37,15 @@ main(int argc, char **argv)
         }
 
         env_create();
+        load_core_lib();
         if (interactive) prompt();
         while ((n = read(fd, buf, sizeof buf - 2)) > 0) {
                 buf[n] = 0;
                 buf[n + 1] = EOF;
                 lex_analize(buf);
-                print_tokens();
+                // print_tokens();
                 tok_parse();
-                print_ast();
+                // print_ast();
                 eval();
                 if (interactive) prompt();
         }

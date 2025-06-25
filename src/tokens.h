@@ -177,7 +177,7 @@ typedef struct Expr {
                 struct { struct Expr *rhs; struct Expr *lhs; } andexpr;
                 struct { struct Expr *rhs; struct Expr *lhs; } orexpr;
                 struct { struct Expr *rhs; vtok *op; } unexpr;
-                struct { struct Expr *args; int count; struct Expr *name; } callexpr;
+                struct { struct Expr *name; int count; struct Expr *args; } callexpr;
                 struct { struct Expr *value; vtok *name; } varexpr;
                 struct { vtok *value; } litexpr;
         };
@@ -216,7 +216,7 @@ typedef struct Stmt {
                 struct { Expr *cond; struct Stmt *body; struct Stmt *elsebody; } ifstmt;
                 struct { Expr *cond; struct Stmt *body; } whilestmt;
                 struct { Expr *body; } assert;
-                struct { vtok *name; Expr *args; int arity; struct Stmt *body; } funcdecl;
+                struct { vtok *name; vtok *params; int arity; struct Stmt *body; } funcdecl;
         };
         Stmttype type;
         struct Stmt *next;

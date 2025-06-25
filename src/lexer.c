@@ -26,14 +26,7 @@ int line = 1;
 /* First token of token list */
 vtok *head_token = NULL;
 
-#ifndef strdup
-#define strdup(s) strdup(s)
-char *
-strdup(const char *s)
-{
-        return memcpy(malloc(strlen(s) + 1), s, strlen(s) + 1);
-}
-#endif
+extern char *strdup(const char *);
 
 void
 print_literal(vtok *tok)

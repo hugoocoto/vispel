@@ -4,18 +4,22 @@
 #include "tokens.h"
 #include <setjmp.h>
 
+#define NO_VALUE ((Value) { .type = TYPE_STR, .str = "no-value" })
+
 struct ValueNode;
 
 typedef enum Valtype {
         TYPE_NUM,
         TYPE_STR,
         TYPE_CALLABLE,
+        TYPE_CORE_CALL,
 } Valtype;
 
 static const char *VALTYPE_REPR[] = {
         [TYPE_NUM] = "NUMBER",
         [TYPE_STR] = "STRING",
         [TYPE_CALLABLE] = "CALLABLE",
+        [TYPE_CORE_CALL] = "CORE CALL",
 };
 
 typedef struct Value {
@@ -24,9 +28,12 @@ typedef struct Value {
                 char *str;
                 struct {
                         int arity;
-                        struct ValueNode *params;
+                        vtok *params;
                         char *name;
-                        Stmt *body;
+                        union {
+                                Stmt *body;
+                                void (*ifunc)(Expr *);
+                        };
                 } call;
         };
         Valtype type;
@@ -42,5 +49,10 @@ Value eval_expr(Expr *e);
 
 /* Eval all expressions from parsing and print result to stdout */
 void eval();
+
+void
+print_val(Value v);
+
+void load_core_lib();
 
 #endif

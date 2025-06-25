@@ -70,13 +70,12 @@ print_ast_expr_branch(Expr *e)
                 printf("%*s", indent * indent_size, "");
                 printf("- [CALL] name: ");
                 print_ast_expr_branch(e->callexpr.name);
-                Expr *ex = e->callexpr.args;
-                while (ex) {
-                        printf("%*s", indent * indent_size, "");
-                        printf("- [Param] ");
-                        print_ast_expr_branch(ex);
-                        ex = ex->next;
-                }
+                // vtok *ex = e->callexpr.args;
+                // while (ex) {
+                //         printf("%*s", indent * indent_size, "");
+                //         printf("- [Param] %s\n", ex->str_literal);
+                //         ex = ex->next;
+                // }
                 printf("\n");
                 break;
         case VAREXPR:
@@ -132,10 +131,14 @@ print_ast_branch(Stmt *s)
                 print_ast_branch(s->ifstmt.body);
                 break;
         case FUNDECLSTMT:
-                printf("Function %s (\n", s->funcdecl.name->str_literal);
-                Expr *ex = s->funcdecl.args;
+                printf("Function %s (", s->funcdecl.name->str_literal);
+                vtok *ex = s->funcdecl.params;
+                if (ex) {
+                        printf("%s", ex->str_literal);
+                        ex = ex->next;
+                }
                 while (ex) {
-                        print_ast_expr_branch(ex);
+                        printf(", %s", ex->str_literal);
                         ex = ex->next;
                 }
                 printf(")\n");
@@ -200,17 +203,39 @@ new_binexpr(Expr *lhs, vtok *op, Expr *rhs)
         return e;
 }
 
+vtok *
+tokdup(vtok *tok)
+{
+        vtok *t = malloc(sizeof *tok);
+        memcpy(t, tok, sizeof *tok);
+        t->next = NULL;
+        return t;
+}
+
 static void
-append_arg(Expr **arg, Expr *new)
+append_arg_tok(vtok **arg, vtok *new)
 {
         if (*arg == NULL) {
-                *arg = new;
+                *arg = tokdup(new);
                 return;
         }
-        Expr *e = *arg;
+        vtok *e = *arg;
         while (e->next)
                 e = e->next;
-        e->next = new;
+        e->next = tokdup(new);
+}
+
+static void
+append_arg_expr(Expr **arg, Expr *new)
+{
+        if (*arg == NULL)
+                *arg = new;
+        else {
+                __auto_type e = *arg;
+                while (e->next)
+                        e = e->next;
+                e->next = new;
+        }
 }
 
 static Expr *
@@ -386,7 +411,7 @@ get_call()
                 Expr *arg = NULL;
                 while (!match(RIGHT_PARENT)) {
                         if (argc > 0) expect_consume(COMMA);
-                        append_arg(&arg, get_expression());
+                        append_arg_expr(&arg, get_expression());
                         ++argc;
                         // if (argc > MAX_ARGC) {
                         //         report("Too much arguments! "
@@ -541,12 +566,12 @@ new_ifstmt(Expr *e, Stmt *body, Stmt *elsebody)
 }
 
 static Stmt *
-new_funcdecl(vtok *name, Expr *arg, int arity, Stmt *body)
+new_funcdecl(vtok *name, vtok *params, int arity, Stmt *body)
 {
         Stmt *s = new_stmt();
         s->type = FUNDECLSTMT;
         s->funcdecl.name = name;
-        s->funcdecl.args = arg;
+        s->funcdecl.params = params;
         s->funcdecl.arity = arity;
         s->funcdecl.body = body;
         return s;
@@ -646,17 +671,18 @@ get_funcdecl()
 {
         // func a(a, b) {
         // }
-        Expr *args = NULL;
-        int argc = 0;
+        vtok *param = NULL;
+        int paramc = 0;
         vtok *id = get_expect_consume(IDENTIFIER);
         expect_consume(LEFT_PARENT);
         while (!match(RIGHT_PARENT)) {
-                if (argc > 0) expect_consume(COMMA);
-                append_arg(&args, get_expression());
-                ++argc;
+                if (paramc > 0) expect_consume(COMMA);
+                append_arg_tok(&param, get_token());
+                consume_token();
+                ++paramc;
         }
         expect_consume(LEFT_BRACE);
-        return new_funcdecl(id, args, argc, get_block());
+        return new_funcdecl(id, param, paramc, get_block());
 }
 
 static Stmt *get_block();

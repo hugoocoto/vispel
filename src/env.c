@@ -78,7 +78,9 @@ env_get(char *name)
         }
         if (ret == NULL) {
                 report("Var `%s` not declared\n", name);
-                longjmp(eval_runtime_error, 1);
+                // longjmp(eval_runtime_error, 1);
+                env_add(name, (Value) { .type = TYPE_STR, .str = "no-value" });
+                return (Value) { .type = TYPE_STR, .str = "no-value" };
         }
         return ret->value;
 }

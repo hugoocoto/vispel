@@ -16,8 +16,6 @@
 
 jmp_buf eval_runtime_error;
 
-#define NO_VALUE ((Value) { .type = TYPE_STR, .str = "no-value" })
-
 static inline _Noreturn void
 runtime_error()
 {
@@ -25,7 +23,7 @@ runtime_error()
 }
 
 
-static void
+void
 print_val(Value v)
 {
         switch (v.type) {
@@ -333,6 +331,56 @@ eval_andexpr(Expr *e)
         return v;
 }
 
+static Value eval_stmt(Stmt *s);
+
+static Value
+eval_callexpr(Expr *e)
+{
+        Value func = eval_expr(e->callexpr.name);
+        switch (func.type) {
+        case TYPE_CALLABLE:
+        case TYPE_CORE_CALL:
+                break;
+        default:
+                report("Calling a non callable expression\n");
+                runtime_error();
+        }
+        if (e->callexpr.count != func.call.arity) {
+                report("Function %s expect %d arguments, but got %d\n",
+                       func.call.name, func.call.arity, e->callexpr.count);
+                runtime_error();
+        }
+        Expr *arg = e->callexpr.args;
+        vtok *param = func.call.params;
+        env_create();
+        if (param) {
+                while (arg) {
+                        env_add(param->str_literal, eval_expr(arg));
+                        arg = arg->next;
+                        param = param->next;
+                }
+                if (arg || param) {
+                        report("Compiler Error: function args list and params"
+                               "list has not the same length\n");
+                        exit(1);
+                }
+        }
+        switch (func.type) {
+        case TYPE_CALLABLE:
+                eval_stmt(func.call.body);
+                break;
+        case TYPE_CORE_CALL:
+                func.call.ifunc(e->callexpr.args);
+                break;
+        default:
+                report("No yet implemented: eval_callexpr for %s\n",
+                       VALTYPE_REPR[func.type]);
+                runtime_error();
+        }
+        env_destroy();
+        return NO_VALUE;
+}
+
 Value
 eval_expr(Expr *e)
 {
@@ -350,6 +398,7 @@ eval_expr(Expr *e)
         case ANDEXPR:
                 return eval_andexpr(e);
         case CALLEXPR:
+                return eval_callexpr(e);
         case VAREXPR:
         default:
                 report("No yet implemented: eval_expr for %s\n", EXPR_REPR[e->type]);
@@ -387,7 +436,7 @@ eval_funcdeclstmt(Stmt *s)
         Value v;
         v.type = TYPE_CALLABLE;
         v.call.arity = s->funcdecl.arity;
-        v.call.params = parse_params(s->funcdecl.args);
+        v.call.params = s->funcdecl.params;
         v.call.name = s->funcdecl.name->str_literal;
         v.call.body = s->funcdecl.body;
         env_add(s->funcdecl.name->str_literal, v);
@@ -405,6 +454,7 @@ eval_stmt(Stmt *s)
                 break;
         case FUNDECLSTMT:
                 eval_funcdeclstmt(s);
+                break;
         case ASSERTSTMT:
                 if (!is_true(eval_expr(s->assert.body))) {
                         report("Assert failed\n");
