@@ -4,6 +4,7 @@
 #include "tokens.h"
 #include <setjmp.h>
 
+
 #define NO_VALUE ((Value) { .type = TYPE_STR, .str = "no-value" })
 
 struct ValueNode;
@@ -22,6 +23,8 @@ static const char *VALTYPE_REPR[] = {
         [TYPE_CORE_CALL] = "CORE CALL",
 };
 
+struct Env;
+
 typedef struct Value {
         union {
                 int num;
@@ -34,6 +37,7 @@ typedef struct Value {
                                 Stmt *body;
                                 struct Value (*ifunc)(Expr *);
                         };
+                        struct Env *closure;
                 } call;
         };
         Valtype type;
@@ -43,6 +47,17 @@ typedef struct ValueNode {
         Value v;
         struct ValueNode *next;
 } ValueNode;
+
+typedef struct node {
+        char *key;
+        Value value;
+} node;
+
+typedef struct Env {
+        node *map;
+        char* name;
+        struct Env *upper;
+} Env;
 
 /* Get the result of eval a single expression */
 Value eval_expr(Expr *e);

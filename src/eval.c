@@ -5,6 +5,7 @@
  *
  * */
 
+#include <assert.h>
 #include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -350,13 +351,21 @@ eval_callexpr(Expr *e)
                 runtime_error();
         }
         if (e->callexpr.count != func.call.arity) {
-                report("Function %s expect %d arguments, but got %d\n",
+                report("Function `%s` expect %d arguments, but got %d\n",
                        func.call.name, func.call.arity, e->callexpr.count);
                 runtime_error();
         }
+
+        Env *prev;
+        Value prev_ret_val;
+        jmp_buf prev_ret_env;
+        Value ret = NO_VALUE;
+
+        prev = env_create_e(func.call.closure);
+
         Expr *arg = e->callexpr.args;
         vtok *param = func.call.params;
-        env_create();
+
         if (param) {
                 while (arg) {
                         env_add(param->str_literal, eval_expr(arg));
@@ -370,35 +379,29 @@ eval_callexpr(Expr *e)
                 }
         }
 
-
-        Value prev_ret_val;
-        Value ret;
-        jmp_buf prev_ret_env;
         switch (func.type) {
         case TYPE_CALLABLE:
                 prev_ret_val = ret_val;
                 memcpy(prev_ret_env, ret_env, sizeof ret_env);
-                ret_val = NO_VALUE;
-                ret = NO_VALUE;
-                if (setjmp(ret_env)) {
+                if (setjmp(ret_env))
                         ret = ret_val;
-                        goto retlbl;
-                }
-                eval_stmt(func.call.body);
-        retlbl:
+                else
+                        ret = eval_stmt(func.call.body);
                 ret_val = prev_ret_val;
                 memcpy(ret_env, prev_ret_env, sizeof ret_env);
-                return ret;
                 break;
+
         case TYPE_CORE_CALL:
-                return func.call.ifunc(e->callexpr.args);
+                ret = func.call.ifunc(e->callexpr.args);
+                break;
+
         default:
                 report("No yet implemented: eval_callexpr for %s\n",
                        VALTYPE_REPR[func.type]);
                 runtime_error();
         }
-        env_destroy();
-        return NO_VALUE;
+        env_destroy_e(prev);
+        return ret;
 }
 
 Value
@@ -459,6 +462,7 @@ eval_funcdeclstmt(Stmt *s)
         v.call.params = s->funcdecl.params;
         v.call.name = s->funcdecl.name->str_literal;
         v.call.body = s->funcdecl.body;
+        v.call.closure = get_current_env();
         env_add(s->funcdecl.name->str_literal, v);
 }
 
@@ -513,9 +517,6 @@ static Value
 eval_stmt_arr(Stmt *s)
 {
         Value v = NO_VALUE;
-        if (setjmp(eval_runtime_error)) {
-                s = s->next;
-        }
         while (s) {
                 v = eval_stmt(s);
                 s = s->next;
@@ -526,5 +527,8 @@ eval_stmt_arr(Stmt *s)
 inline void
 eval()
 {
+        if (setjmp(eval_runtime_error)) {
+                return;
+        }
         print_val(eval_stmt_arr(head_stmt));
 }

@@ -1,0 +1,21 @@
+var a = "glob";
+
+func f()
+{
+        func f() {
+                print(a);
+        }
+
+        func c() {
+                var a = "loc 1";
+                f();
+                a = "loc 2";
+                f();
+        }
+        c();
+
+}
+
+f()
+// loc 1
+// loc 2

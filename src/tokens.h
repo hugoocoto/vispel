@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+extern char *strdup(const char *);
+
 static void
 report(char *format, ...)
 {

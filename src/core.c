@@ -23,6 +23,7 @@ load(const char *name, Value (*func)(Expr *), int arity)
         v.call.ifunc = func;        // C function
         v.call.name = strdup(name); // vispel function name
         v.call.params = NULL;
+        v.call.closure = get_current_env();
         env_add(v.call.name, v);
 }
 

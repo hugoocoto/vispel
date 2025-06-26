@@ -13,6 +13,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "env.h"
 #include "interpreter.h"
 #include "tokens.h"
 

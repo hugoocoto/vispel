@@ -26,7 +26,6 @@ int line = 1;
 /* First token of token list */
 vtok *head_token = NULL;
 
-extern char *strdup(const char *);
 
 void
 print_literal(vtok *tok)
