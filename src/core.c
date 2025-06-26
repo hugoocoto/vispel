@@ -14,6 +14,7 @@
 
 extern char *strdup(const char *);
 
+
 static void
 load(const char *name, Value (*func)(Expr *), int arity)
 {

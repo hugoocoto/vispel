@@ -9,3 +9,4 @@ Var `a` not declared
 Expected SEMICOLON but got EQUAL
 Var `q` not declared
 Var `exit` not declared
+Expected LEFT_PARENT but got LEFT_BRACE at line 1, offset 8
