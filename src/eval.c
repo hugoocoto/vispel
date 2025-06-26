@@ -466,7 +466,6 @@ eval_funcdeclstmt(Stmt *s)
         v.call.name = s->funcdecl.name->str_literal;
         v.call.body = s->funcdecl.body;
         v.call.closure = get_current_env();
-        printf("function %s: closure = %s\n", v.call.name, v.call.closure->name);
         env_add(s->funcdecl.name->str_literal, v);
 }
 
