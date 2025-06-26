@@ -5,7 +5,7 @@
  *
  * */
 
-#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "env.h"
@@ -14,6 +14,18 @@
 
 extern char *strdup(const char *);
 
+static void
+load(const char *name, Value (*func)(Expr *), int arity)
+{
+        Value v;
+        v.type = TYPE_CORE_CALL;
+        v.call.arity = arity;       // number of params
+        v.call.ifunc = func;        // C function
+        v.call.name = strdup(name); // vispel function name
+        v.call.params = NULL;
+        env_add(v.call.name, v);
+}
+
 Value
 core_print(Expr *args)
 {
@@ -21,20 +33,23 @@ core_print(Expr *args)
         return NO_VALUE;
 }
 
-void
-load_print()
+Value
+core_input()
 {
-        Value v;
-        v.type = TYPE_CORE_CALL;
-        v.call.arity = 1;
-        v.call.ifunc = core_print;
-        v.call.name = strdup("print");
-        v.call.params = NULL;
-        env_add("print", v);
+        char buf[1024];
+        char *c;
+        if (fgets(buf, sizeof buf - 1, stdin)) {
+                if ((c = strchr(buf, '\n'))) {
+                        *c = 0;
+                }
+                return (Value) { .type = TYPE_STR, .str = strdup(buf) };
+        }
+        return NO_VALUE;
 }
 
 void
 load_core_lib()
 {
-        load_print();
+        load("print", core_print, 1);
+        load("input", core_input, 0);
 }
