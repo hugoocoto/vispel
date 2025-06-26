@@ -15,9 +15,10 @@ pogram -> declaration* EOF
 declaration -> vardecl | funcdecl | stmt
 vardecl -> "var" IDENTIFIER ("=" expr)? ";"
 funcdecl -> "fun" IDENTIFIER "(" expr? ("," expr)* ")" block
-stmt -> block | assert | exprstmt | if | while
+stmt -> block | assert | exprstmt | if | while | return
 if -> "if" "(" expr ")" declaration ("else" declaration)?
 while -> "while" "(" expr ")" declaration
+return -> "return" expr ";"
 assert -> "assert" expr ";"
 exprstmt -> expr ";"
 block -> "{" (stmt ";")* "}"

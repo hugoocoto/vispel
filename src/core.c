@@ -14,10 +14,11 @@
 
 extern char *strdup(const char *);
 
-void
+Value
 core_print(Expr *args)
 {
         print_val(eval_expr(args));
+        return NO_VALUE;
 }
 
 void

@@ -195,6 +195,7 @@ typedef enum {
         IFSTMT,
         WHILESTMT,
         FUNDECLSTMT,
+        RETSTMT,
 } Stmttype;
 
 static const char *STMT_REPR[] = {
@@ -205,6 +206,7 @@ static const char *STMT_REPR[] = {
         [IFSTMT] = "IFSTMT",
         [WHILESTMT] = "WHILESTMT",
         [FUNDECLSTMT] = "FUNDECLSTMT",
+        [RETSTMT] = "RETSTMT",
 };
 
 // clang-format off
@@ -216,6 +218,7 @@ typedef struct Stmt {
                 struct { Expr *cond; struct Stmt *body; struct Stmt *elsebody; } ifstmt;
                 struct { Expr *cond; struct Stmt *body; } whilestmt;
                 struct { Expr *body; } assert;
+                struct { Expr *value; } retstmt;
                 struct { vtok *name; vtok *params; int arity; struct Stmt *body; } funcdecl;
         };
         Stmttype type;

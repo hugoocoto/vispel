@@ -32,7 +32,7 @@ typedef struct Value {
                         char *name;
                         union {
                                 Stmt *body;
-                                void (*ifunc)(Expr *);
+                                struct Value (*ifunc)(Expr *);
                         };
                 } call;
         };

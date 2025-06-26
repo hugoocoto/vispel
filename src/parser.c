@@ -555,6 +555,15 @@ new_whilestmt(Expr *e, Stmt *body)
 }
 
 static Stmt *
+new_return(Expr *e)
+{
+        Stmt *s = new_stmt();
+        s->type = RETSTMT;
+        s->retstmt.value = e;
+        return s;
+}
+
+static Stmt *
 new_ifstmt(Expr *e, Stmt *body, Stmt *elsebody)
 {
         Stmt *s = new_stmt();
@@ -690,6 +699,7 @@ static Stmt *get_exprstmt();
 static Stmt *get_assert();
 static Stmt *get_ifstmt();
 static Stmt *get_whilestmt();
+static Stmt *get_return();
 
 static Stmt *
 get_stmt()
@@ -698,6 +708,7 @@ get_stmt()
         if (match(LEFT_BRACE)) return get_block();
         if (match(IF)) return get_ifstmt();
         if (match(WHILE)) return get_whilestmt();
+        if (match(RETURN)) return get_return();
         return get_exprstmt();
 }
 
@@ -708,6 +719,14 @@ get_whilestmt()
         Expr *e = get_expression();
         expect_consume(RIGHT_PARENT);
         return new_whilestmt(e, get_declaration());
+}
+
+static Stmt *
+get_return()
+{
+        Stmt *s = new_return(get_expression());
+        expect_consume(SEMICOLON);
+        return s;
 }
 
 static Stmt *

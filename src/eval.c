@@ -14,6 +14,10 @@
 #include "interpreter.h"
 #include "tokens.h"
 
+/* return jump and value storage */
+Value ret_val;
+jmp_buf ret_env;
+
 jmp_buf eval_runtime_error;
 
 static inline _Noreturn void
@@ -365,13 +369,29 @@ eval_callexpr(Expr *e)
                         exit(1);
                 }
         }
+
+
+        Value prev_ret_val;
+        Value ret;
+        jmp_buf prev_ret_env;
         switch (func.type) {
         case TYPE_CALLABLE:
+                prev_ret_val = ret_val;
+                memcpy(prev_ret_env, ret_env, sizeof ret_env);
+                ret_val = NO_VALUE;
+                ret = NO_VALUE;
+                if (setjmp(ret_env)) {
+                        ret = ret_val;
+                        goto retlbl;
+                }
                 eval_stmt(func.call.body);
+        retlbl:
+                ret_val = prev_ret_val;
+                memcpy(ret_env, prev_ret_env, sizeof ret_env);
+                return ret;
                 break;
         case TYPE_CORE_CALL:
-                func.call.ifunc(e->callexpr.args);
-                break;
+                return func.call.ifunc(e->callexpr.args);
         default:
                 report("No yet implemented: eval_callexpr for %s\n",
                        VALTYPE_REPR[func.type]);
@@ -478,6 +498,9 @@ eval_stmt(Stmt *s)
                         eval_stmt(s->whilestmt.body);
                 }
                 break;
+        case RETSTMT:
+                ret_val = eval_expr(s->retstmt.value);
+                longjmp(ret_env, 1);
         default:
                 report("Todo: eval_stmt for %s\n", STMT_REPR[s->type]);
                 runtime_error();
