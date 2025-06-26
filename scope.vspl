@@ -1,21 +1,15 @@
-var a = "glob";
+var a = "loc 1";
 
 func f()
 {
-        func f() {
+        func c(){
                 print(a);
         }
 
-        func c() {
-                var a = "loc 1";
-                f();
-                a = "loc 2";
-                f();
-        }
+        a = "loc 2";
         c();
-
 }
 
 f()
-// loc 1
 // loc 2
+// expected: loc 1

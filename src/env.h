@@ -24,6 +24,8 @@ Value env_set_e(struct Env *e, char *name, Value value);
 Env *env_create_e(Env *upper);
 /* Destroy current env and set current env to CURRENT */
 void env_destroy_e(Env *current);
+/* Return old upper and set upper to NEWUPPER */
+Env *env_change_upper(Env* newupper);
 
 #include <setjmp.h>
 /* jmp here on error */

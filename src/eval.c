@@ -361,10 +361,10 @@ eval_callexpr(Expr *e)
         jmp_buf prev_ret_env;
         Value ret = NO_VALUE;
 
-        prev = env_create_e(func.call.closure);
-
         Expr *arg = e->callexpr.args;
         vtok *param = func.call.params;
+
+        env_create();
 
         if (param) {
                 while (arg) {
@@ -379,8 +379,10 @@ eval_callexpr(Expr *e)
                 }
         }
 
+
         switch (func.type) {
         case TYPE_CALLABLE:
+                prev = env_change_upper(func.call.closure);
                 prev_ret_val = ret_val;
                 memcpy(prev_ret_env, ret_env, sizeof ret_env);
                 if (setjmp(ret_env))
@@ -389,10 +391,12 @@ eval_callexpr(Expr *e)
                         ret = eval_stmt(func.call.body);
                 ret_val = prev_ret_val;
                 memcpy(ret_env, prev_ret_env, sizeof ret_env);
+                env_destroy_e(prev);
                 break;
 
         case TYPE_CORE_CALL:
                 ret = func.call.ifunc(e->callexpr.args);
+                env_destroy();
                 break;
 
         default:
@@ -400,7 +404,6 @@ eval_callexpr(Expr *e)
                        VALTYPE_REPR[func.type]);
                 runtime_error();
         }
-        env_destroy_e(prev);
         return ret;
 }
 
@@ -463,6 +466,7 @@ eval_funcdeclstmt(Stmt *s)
         v.call.name = s->funcdecl.name->str_literal;
         v.call.body = s->funcdecl.body;
         v.call.closure = get_current_env();
+        printf("function %s: closure = %s\n", v.call.name, v.call.closure->name);
         env_add(s->funcdecl.name->str_literal, v);
 }
 

@@ -42,6 +42,18 @@ get_current_env()
         return lower_env;
 }
 
+Env *
+env_change_upper(Env *newupper)
+{
+        if (!lower_env) {
+                report("no env created!\n");
+                longjmp(eval_runtime_error, 1);
+        }
+
+        Env *ret = lower_env->upper;
+        lower_env->upper = newupper;
+        return ret;
+}
 
 Value
 env_add_e(struct Env *e, char *name, Value value)
