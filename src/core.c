@@ -35,7 +35,7 @@ core_print(Expr *args)
 }
 
 Value
-core_input()
+core_input(Expr* _)
 {
         char buf[1024];
         char *c;

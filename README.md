@@ -12,3 +12,6 @@ Vispel compiler would be written once I know what I'm doing.
 
 The makefile compiles the compiler using C99 standard. It uses stb_ds as the
 unique dependency.
+
+## Line Count
+[here](./wc.md)

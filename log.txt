@@ -7,3 +7,5 @@ Var `a` not declared
 Expected LITERAL but got VAR
 Var `a` not declared
 Expected SEMICOLON but got EQUAL
+Var `q` not declared
+Var `exit` not declared
