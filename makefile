@@ -1,4 +1,5 @@
-CC = cc -std=c99
+CC = cc
+# -std=c99
 INC = -I.
 LIB = $(wildcard src/*.h src/stb_ds.h)
 SRC = $(wildcard src/*.c)

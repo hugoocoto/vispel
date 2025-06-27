@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <setjmp.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,6 +93,29 @@ env_get_e(struct Env *env, char *name)
         return ret->value;
 }
 
+int
+env_get_offset(char *name)
+{
+        if (!lower_env) {
+                report("no env created!\n");
+                longjmp(resolve_error_jmp, 1);
+        }
+
+        int offset = 0;
+        Env *e = lower_env;
+        node *ret;
+        while (e && (ret = shgetp_null(e->map, name)) == NULL) {
+                e = e->upper;
+                ++offset;
+        }
+        if (ret == NULL) {
+                report("Var `%s` not declared\n", name);
+                longjmp(resolve_error_jmp, 1);
+                return -1;
+        }
+        return offset;
+}
+
 Value
 env_set_e(struct Env *env, char *name, Value value)
 {
@@ -180,4 +204,38 @@ Value
 env_set(char *name, Value value)
 {
         return env_set_e(lower_env, name, value);
+}
+
+static Env *
+env_get_by_offset(int offset)
+{
+        Env *e = lower_env;
+        while (offset > 0 && e) {
+                e = e->upper;
+                --offset;
+        }
+        if (!e) {
+                report("Offset greater than possible jumps\n");
+                longjmp(eval_runtime_error, 1);
+        }
+        return e;
+}
+
+
+Value
+env_add_o(int offset, char *name, Value value)
+{
+        return env_add_e(env_get_by_offset(offset), name, value);
+}
+
+Value
+env_get_o(int offset, char *name)
+{
+        return env_get_e(env_get_by_offset(offset), name);
+}
+
+Value
+env_set_o(int offset, char *name, Value value)
+{
+        return env_set_e(env_get_by_offset(offset), name, value);
 }

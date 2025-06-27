@@ -55,7 +55,7 @@ typedef struct node {
 
 typedef struct Env {
         node *map;
-        char* name;
+        char *name;
         struct Env *upper;
 } Env;
 
@@ -64,10 +64,10 @@ Value eval_expr(Expr *e);
 
 /* Eval all expressions from parsing and print result to stdout */
 void eval();
-
-void
-print_val(Value v);
-
+void print_val(Value v);
 void load_core_lib();
+
+void resolve();
+
 
 #endif

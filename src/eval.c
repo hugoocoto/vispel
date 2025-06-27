@@ -71,7 +71,7 @@ eval_litexpr(Expr *e)
                 v.num = 0;
                 break;
         case IDENTIFIER:
-                v = env_get(e->litexpr.value->str_literal);
+                v = env_get_expr(e, e->litexpr.value->str_literal);
                 break;
         default:
                 report("No yet implemented: eval_litexpr for %s\n",
@@ -312,7 +312,7 @@ eval_assignexpr(Expr *s)
 {
         char *name = s->assignexpr.name->str_literal;
         Value v = eval_expr(s->assignexpr.value);
-        return env_set(name, v);
+        return env_set_expr(s, name, v);
 }
 
 static Value
