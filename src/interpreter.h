@@ -4,14 +4,6 @@
 #include "tokens.h"
 #include <setjmp.h>
 
-#define LOG_PRINT 1
-#if defined(LOG_PRINT) && LOG_PRINT
-#define LOG(...) printf(__VA_ARGS__)
-#else
-#define LOG(...)
-#endif
-
-
 #define NO_VALUE ((Value) { .type = TYPE_STR, .str = "no-value" })
 
 struct ValueNode;

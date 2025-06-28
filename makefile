@@ -9,7 +9,7 @@ BUILD_DIR = ./build
 OUT = $(BUILD_DIR)/vspli
 
 test: $(OUT)
-	./$(OUT) ./examples/test.vspl
+	./$(OUT) ./examples/test.vspl 1>/dev/null
 
 $(OUT): $(OBJ) $(OBJ_DIR) $(BUILD_DIR) wc.md
 	$(CC) $(OBJ) $(INC) -o $(OUT)

@@ -13,16 +13,6 @@ jmp_buf resolve_error_jmp;
 #define UNDEFINED ((Value) { .type = TYPE_NUM, .num = 0 })
 
 
-/* Raise an error if function is not implemented */
-#define TODO()                                           \
-        do {                                             \
-                report("No yet implemented: %s at %d\n", \
-                       __FUNCTION__, __LINE__);          \
-                resolve_error();                         \
-        } while (0)
-
-
-/* Hashmap Expr * -> int (num of jumps to env that contains definition) */
 struct {
         void *key;
         int value;
@@ -37,7 +27,6 @@ resolve_error()
 static void
 sidetable_add_expr(Expr *e)
 {
-        LOG("sidetable_add_expr(%p)\n", e);
         switch (e->type) {
         case LITEXPR:
                 if (e->litexpr.value->token != IDENTIFIER) {
@@ -59,8 +48,6 @@ sidetable_add_expr(Expr *e)
 static void
 sidetable_add_stmt(Stmt *s)
 {
-        LOG("sidetable_add_stmt(%p)\n", s);
-        // hmput(sidetable, s, env_get_offset(s->vardecl.name->str_literal));
         switch (s->type) {
         default:
                 report("No yet implemented: sidetable_add_stmt for %s\n",
@@ -78,14 +65,7 @@ sidetable_get(void *e)
                 report("Can not resolve %p\n", e);
                 resolve_error();
         }
-        LOG("sidetable_get(%p) = %d\n", e, sidetable[i].value);
         return sidetable[i].value;
-}
-
-static void
-define_core()
-{
-        TODO();
 }
 
 static void
@@ -241,7 +221,6 @@ resolve()
         if (setjmp(resolve_error_jmp) | setjmp(eval_runtime_error)) {
                 return 1;
         }
-        // TODO: define_core();
         resolve_stmt_arr(head_stmt);
         env_destroy_e(prev);
         return 0;
@@ -250,13 +229,11 @@ resolve()
 Value
 env_get_l(void *e, char *name)
 {
-        LOG("env_get_l(%p, %s)\n", e, name);
         return env_get_o(sidetable_get(e), name);
 }
 
 Value
 env_set_l(void *e, char *name, Value value)
 {
-        LOG("env_get_l(%p, %s, value)\n", e, name);
         return env_set_o(sidetable_get(e), name, value);
 }

@@ -125,8 +125,6 @@ is_equal(Value v1, Value v2)
         case TYPE_NUM:
                 return v1.num == v2.num;
         case TYPE_STR:
-                printf("is_equal(%s, %s) -> %s\n", v1.str, v2.str,
-                       strcmp(v1.str, v2.str) == 0 ? "equal" : "not equal");
                 return strcmp(v1.str, v2.str) == 0;
         default:
                 report("No yet implemented: is_equal for %s and %s\n",

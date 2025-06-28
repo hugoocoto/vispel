@@ -31,7 +31,7 @@ if (c) {
         assert c == 1;
         c = 2;
 }
-assert c == 2;
+assert ( c == 2 ) ;
 
 if (c == 1 || c == 2) c = 3;
 assert c == 3;

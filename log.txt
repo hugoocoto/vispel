@@ -17,3 +17,4 @@ Assert failed
 Assert failed
 Assert failed
 Assert failed
+Var `a` already declared

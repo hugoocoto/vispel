@@ -26,15 +26,15 @@ gen_env_random_name()
 static void
 print_env_list()
 {
-        LOG("\e[90m");
+        printf("\e[90m");
         Env *e = lower_env;
         while (e) {
-                if (e != lower_env) LOG(", ");
-                LOG("%s", e->name);
+                if (e != lower_env) printf(", ");
+                printf("%s", e->name);
                 e = e->upper;
         }
-        LOG("\e[0m");
-        LOG("\n");
+        printf("\e[0m");
+        printf("\n");
 }
 
 struct Env *
@@ -75,7 +75,6 @@ env_add_e(struct Env *e, char *name, Value value)
 Value
 env_get_e(struct Env *env, char *name)
 {
-        LOG("env_get_e(%s, %s)\n", env->name, name);
         if (!env) {
                 report("no env created!\n");
                 longjmp(eval_runtime_error, 1);
@@ -113,8 +112,6 @@ env_get_offset(char *name)
                 longjmp(resolve_error_jmp, 1);
                 return -1;
         }
-        LOG("Offset for `%s`: %d\n", name, offset);
-        print_env_list();
         return offset;
 }
 
@@ -131,9 +128,6 @@ env_get_by_offset(int offset)
                 report("Offset greater than possible jumps\n");
                 longjmp(eval_runtime_error, 1);
         }
-        LOG("env_get_by_offset(%d) -> %s (with lower_env=%s)\n",
-            offset, e->name, lower_env->name);
-        print_env_list();
         return e;
 }
 
@@ -173,11 +167,6 @@ env_create_e(Env *upper)
         Env *e = new_env();
         e->upper = upper;
         lower_env = e;
-        LOG("env_create_e:\n");
-        LOG(" - new lower_env: %s\n", lower_env->name);
-        LOG("   - upper: %s\n", upper ? upper->name : "null");
-        LOG(" - prev lower_env: %s\n", ret->name);
-        print_env_list();
         return ret;
 }
 
@@ -190,9 +179,6 @@ env_destroy_e(Env *current)
                 longjmp(eval_runtime_error, 1);
         }
         lower_env = current;
-        LOG("env_destroy_e:\n");
-        LOG(" - new lower_env: %s\n", lower_env->name);
-        print_env_list();
 }
 
 void
@@ -203,9 +189,6 @@ env_create()
                 e->upper = lower_env;
         }
         lower_env = e;
-        LOG("env_create:\n");
-        LOG(" - new lower_env: %s\n", lower_env->name);
-        print_env_list();
 }
 
 void
@@ -216,24 +199,17 @@ env_destroy()
                 longjmp(eval_runtime_error, 1);
         }
         lower_env = lower_env->upper;
-        LOG("env_destroy:\n");
-        if (lower_env)
-                LOG(" - new lower_env: %s\n", lower_env->name);
-        print_env_list();
 }
 
 Value
 env_add(char *name, Value value)
 {
-        LOG("Adding `%s` at %s\n", name, lower_env->name);
-        print_env_list();
         return env_add_e(lower_env, name, value);
 }
 
 Value
 env_get(char *name)
 {
-        LOG("env_get(%s) with lower_env=%s\n", name, lower_env->name);
         return env_get_e(lower_env, name);
 }
 
@@ -252,7 +228,6 @@ env_add_o(int offset, char *name, Value value)
 Value
 env_get_o(int offset, char *name)
 {
-        LOG("env_get_o(%d, %s)\n", offset, name);
         return env_get_e(env_get_by_offset(offset), name);
 }
 
