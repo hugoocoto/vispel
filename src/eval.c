@@ -54,7 +54,6 @@ eval_litexpr(Expr *e)
         Value v;
         switch (e->litexpr.value->token) {
         case STRING:
-        case CHAR:
                 v.type = TYPE_STR;
                 v.str = e->litexpr.value->str_literal;
                 break;

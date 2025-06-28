@@ -1,5 +1,4 @@
-CC = cc -ggdb
-# -std=c99
+CC = cc -ggdb -std=gnu99
 INC = -I.
 LIB = $(wildcard src/*.h src/stb_ds.h src/core/*.h)
 SRC = $(wildcard src/*.c src/core/*.c)
@@ -9,7 +8,7 @@ BUILD_DIR = ./build
 OUT = $(BUILD_DIR)/vspli
 
 test: $(OUT)
-	./$(OUT) ./examples/test.vspl 1>/dev/null
+	./$(OUT) ./examples/test.vspl
 
 $(OUT): $(OBJ) $(OBJ_DIR) $(BUILD_DIR) wc.md
 	$(CC) $(OBJ) $(INC) -o $(OUT)

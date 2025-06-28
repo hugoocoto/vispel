@@ -76,7 +76,6 @@ typedef enum {
         SHIFT_RIGHT,
         FUNC_INPUT,
         FUNC_OUTPUT,
-        CHAR,
         ASSERT,
         UNKNOWN,
 } vtoktype;
@@ -131,7 +130,6 @@ static const char *TOKEN_REPR[] = {
         [SHIFT_RIGHT] = "SHIFT_RIGHT",
         [FUNC_INPUT] = "FUNC_INPUT",
         [FUNC_OUTPUT] = "FUNC_OUTPUT",
-        [CHAR] = "CHAR",
         [ASSERT] = "ASSERT",
         [UNKNOWN] = "UNKNOWN",
 };

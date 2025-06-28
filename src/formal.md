@@ -9,7 +9,7 @@ factor -> unary (("/" | "\*") unary)*
 unary -> ("!" | "-") unary | call
 call -> group "(" expr? ("," expr)* ")"
 group -> "(" expr ")" | literal
-literal -> NUM | STR | CHAR | "true" | "false" | IDENTIFIER
+literal -> NUM | STR | "true" | "false" | IDENTIFIER
 
 pogram -> declaration* EOF
 declaration -> vardecl | funcdecl | stmt

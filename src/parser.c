@@ -367,7 +367,6 @@ is_literal()
         vtok *t;
         if ((t = match(NUMBER)) ||
             (t = match(STRING)) ||
-            (t = match(CHAR)) ||
             (t = match(IDENTIFIER)) ||
             (t = match(TRUE)) ||
             (t = match(FALSE)))

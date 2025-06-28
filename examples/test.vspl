@@ -13,6 +13,11 @@ assert !!true;
 a = 1;
 assert a == 1;
 
+assert a = b = 2;
+assert a == 2;
+assert b == 2;
+assert (a == b) == true;
+
 var c = 1;
 {
         assert c == 1;
@@ -66,7 +71,6 @@ assert p(1, 2, 3) == 1 + 2 + 3 * 2;
         {
                 func c(){
                         assert(a == "loc 1");
-                        print(a);
                 }
 
                 var a = "loc 2";
@@ -80,7 +84,6 @@ assert p(1, 2, 3) == 1 + 2 + 3 * 2;
         {
                 func c(){
                         assert(a == "loc 2");
-                        print(a);
                 }
 
                 a = "loc 2";
@@ -94,7 +97,6 @@ func ff()
 {
         func c(){
                 assert(aa == "loc 1");
-                print(aa);
         }
 
         var aa = "loc 2";
@@ -107,7 +109,6 @@ func ff2()
 {
         func c(){
                 assert(aa == "loc 2");
-                print(aa);
         }
 
         aa = "loc 2";

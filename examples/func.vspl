@@ -1,5 +1,7 @@
 func a(c, d , e){
-        func add2(x) { return x + 2; }
+        func add2(x) {
+                return x + 2;
+        }
         print("Values:");
         print(add2(c));
         print(add2(d));

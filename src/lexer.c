@@ -34,9 +34,6 @@ print_literal(vtok *tok)
         case STRING:
                 printf(" \"%s\"", tok->str_literal);
                 break;
-        case CHAR:
-                printf(" '%s'", tok->str_literal);
-                break;
         case IDENTIFIER:
                 printf(" `%s`", tok->str_literal);
                 break;
@@ -59,7 +56,6 @@ print_token(vtok *tok)
 {
         printf("[%2d:%2ld] Token: %s", tok->line, tok->offset, TOKEN_REPR[tok->token]);
         if (tok->token == STRING ||
-            tok->token == CHAR ||
             tok->token == IDENTIFIER ||
             tok->token == NUMBER ||
             tok->token == TRUE ||
@@ -88,10 +84,8 @@ new_token(vtoktype token)
         tok->lexeme = TOKEN_REPR[token];
         tok->offset = start_offset - start_line + 1;
         /* Link token */
-        /* this work if multiple lex analisis? */
         static vtok *prev = NULL;
         tok->next = NULL;
-        // tok->prev = prev;
         if (prev) prev->next = tok;
         prev = tok;
 
@@ -106,9 +100,6 @@ add_literal_value(vtok *tok, ...)
         va_start(v, tok);
         switch (tok->token) {
         case STRING:
-                tok->str_literal = va_arg(v, char *);
-                break;
-        case CHAR:
                 tok->str_literal = va_arg(v, char *);
                 break;
         case IDENTIFIER:
@@ -146,12 +137,15 @@ match(char expected)
         return true;
 }
 
-#define get_consume_lex() (*current_ptr++)
+static inline char
+get_consume_lex()
+{
+        return *current_ptr++;
+}
 
 static char *
 get_string()
 {
-        /* To test */
         char *ret = current_ptr;
         char tmp;
 
@@ -166,26 +160,8 @@ get_string()
 }
 
 static char *
-get_char()
-{
-        /* To test */
-        char *ret = current_ptr;
-        char tmp;
-
-        do {
-                tmp = get_consume_lex();
-        } while (tmp != '\'');
-
-        current_ptr[-1] = 0;
-        ret = strdup(ret);
-        current_ptr[-1] = tmp;
-        return ret;
-}
-
-static char *
 get_identifier()
 {
-        /* To test */
         char *ret = current_ptr - 1;
         char tmp;
 
@@ -216,7 +192,9 @@ static void
 get_comment()
 {
         for (;;) {
-                if (*current_ptr == '\n' || *current_ptr == EOF || *current_ptr == 0) break;
+                if (*current_ptr == '\n' ||
+                    *current_ptr == EOF ||
+                    *current_ptr == 0) break;
                 ++current_ptr;
         }
 }
@@ -304,6 +282,13 @@ lex_analize(char *source)
                         else
                                 add_token(BANG);
                         break;
+                case '|':
+                        if (match('|'))
+                                add_token(OR);
+                        else
+                                add_token(BITWISE_OR);
+                        break;
+
 
                 case '>':
                         if (match('>'))
@@ -322,22 +307,8 @@ lex_analize(char *source)
                                 add_token(LESS);
                         break;
 
-                case '|':
-                        if (match('|'))
-                                add_token(OR);
-                        else if (match('>'))
-                                add_token(FUNC_INPUT);
-                        else if (match('<'))
-                                add_token(FUNC_OUTPUT);
-                        else
-                                add_token(BITWISE_OR);
-                        break;
-
                 case '"':
                         add_token(STRING, get_string());
-                        break;
-                case '\'':
-                        add_token(CHAR, get_char());
                         break;
 
                 case '0' ... '9':
@@ -354,10 +325,10 @@ lex_analize(char *source)
                         break;
 
                 default:
-                        // clang-format off
                         if (isspace(current)) break;
                         if (!isalpha(current) && current != '_') {
-                                report("[line %d] Invalid lexeme found: `%c`\n", line, current);
+                                report("[line %d] Invalid lexeme: `%c`\n",
+                                       line, current);
                                 add_token(UNKNOWN);
                                 break;
                         }
@@ -388,7 +359,6 @@ lex_analize(char *source)
                                 add_token(ASSERT);
                         else
                                 add_token(IDENTIFIER, get_identifier());
-                        // clang-format on
 
                         break;
                 }
@@ -396,25 +366,3 @@ lex_analize(char *source)
                 if (current == EOF || current == 0) break;
         }
 }
-
-#if 0
-int
-main(int argc, char **argv)
-{
-        if (argc != 2) return -1;
-        char buf[1024 * 1024];
-        int fd = open(argv[1], O_RDONLY);
-        if (fd < 0) {
-                report("Can not open to read file `%s`\n", argv[1]);
-                return -1;
-        }
-        ssize_t n = read(fd, buf, sizeof buf - 1);
-        if (n <= 0) {
-                report("Can not read from `%s`\n", argv[1]);
-                return -1;
-        }
-        buf[n] = EOF;
-        lex_analize(buf);
-        return 0;
-}
-#endif
