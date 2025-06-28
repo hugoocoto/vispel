@@ -14,7 +14,7 @@ $(OUT): $(OBJ) $(OBJ_DIR) $(BUILD_DIR) wc.md
 	$(CC) $(OBJ) $(INC) -o $(OUT)
 
 wc.md: $(SRC) $(LIB)
-	cloc `find src -name "*.c" -o -name "*.h" -a ! -name "stb_ds.h"` --hide-rate --md > wc.md
+	cloc src --by-file --not-match-f='stb_ds\.h' --hide-rate --md > wc.md
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)

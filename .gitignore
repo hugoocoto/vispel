@@ -4,4 +4,5 @@ src/log.txt
 src/repl
 src/stb_ds.h
 objs
+build
 
