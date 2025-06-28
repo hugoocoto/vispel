@@ -3,6 +3,17 @@
 Very Simple Programming Language. This is another slow interpreter to compile
 another useless language.
 
+## showcase
+
+```c
+var c = 2;
+func f(a) {
+    a = a + c;
+    print(a);
+}
+f(3); // 5
+```
+
 ## Compiler
 
 This compiler is a generic implementation of a generic non-existing language.
