@@ -64,7 +64,6 @@ Value eval_expr(Expr *e);
 /* Eval all expressions from parsing and print result to stdout */
 void eval();
 void print_val(Value v);
-void load_core_lib();
 
 int resolve();
 

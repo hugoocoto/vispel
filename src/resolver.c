@@ -3,6 +3,7 @@
 #include "env.h"
 #include "interpreter.h"
 #include "tokens.h"
+#include "core/core.h"
 
 #include "stb_ds.h"
 

@@ -1,8 +1,8 @@
 CC = cc -ggdb
 # -std=c99
 INC = -I.
-LIB = $(wildcard src/*.h src/stb_ds.h)
-SRC = $(wildcard src/*.c)
+LIB = $(wildcard src/*.h src/stb_ds.h src/core/*.h)
+SRC = $(wildcard src/*.c src/core/*.c)
 OBJ = $(patsubst %.c,$(OBJ_DIR)/%.o,$(SRC))
 OBJ_DIR = ./objs
 BUILD_DIR = ./build
