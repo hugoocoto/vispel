@@ -53,9 +53,64 @@ while(d > 0) {
 }
 assert d == 0;
 
-func g(a, b, c){
+func p(a, b, c){
         func double(x) { return x * 2; }
         return a + b + double(c);
 }
 
-assert g(1, 2, 3) == 1 + 2 + 3 * 2;
+assert p(1, 2, 3) == 1 + 2 + 3 * 2;
+
+{
+        var a = "loc 1";
+        func f()
+        {
+                func c(){
+                        assert(a == "loc 1");
+                        print(a);
+                }
+
+                var a = "loc 2";
+                c();
+        }
+        f();
+}
+{
+        var a = "loc 1";
+        func f()
+        {
+                func c(){
+                        assert(a == "loc 2");
+                        print(a);
+                }
+
+                a = "loc 2";
+                c();
+        }
+        f();
+}
+
+var aa = "loc 1";
+func ff()
+{
+        func c(){
+                assert(aa == "loc 1");
+                print(aa);
+        }
+
+        var aa = "loc 2";
+        c();
+}
+ff();
+
+aa = "loc 1";
+func ff2()
+{
+        func c(){
+                assert(aa == "loc 2");
+                print(aa);
+        }
+
+        aa = "loc 2";
+        c();
+}
+ff2();

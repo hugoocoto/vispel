@@ -71,7 +71,7 @@ eval_litexpr(Expr *e)
                 v.num = 0;
                 break;
         case IDENTIFIER:
-                v = env_get_expr(e, e->litexpr.value->str_literal);
+                v = env_get_l(e, e->litexpr.value->str_literal);
                 break;
         default:
                 report("No yet implemented: eval_litexpr for %s\n",
@@ -125,7 +125,9 @@ is_equal(Value v1, Value v2)
         case TYPE_NUM:
                 return v1.num == v2.num;
         case TYPE_STR:
-                // return strcmp(v1.str, v2.str) == 0;
+                printf("is_equal(%s, %s) -> %s\n", v1.str, v2.str,
+                       strcmp(v1.str, v2.str) == 0 ? "equal" : "not equal");
+                return strcmp(v1.str, v2.str) == 0;
         default:
                 report("No yet implemented: is_equal for %s and %s\n",
                        VALTYPE_REPR[v1.type], VALTYPE_REPR[v2.type]);
@@ -312,7 +314,7 @@ eval_assignexpr(Expr *s)
 {
         char *name = s->assignexpr.name->str_literal;
         Value v = eval_expr(s->assignexpr.value);
-        return env_set_expr(s, name, v);
+        return env_set_l(s, name, v);
 }
 
 static Value

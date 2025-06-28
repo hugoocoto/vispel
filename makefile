@@ -1,4 +1,4 @@
-CC = cc
+CC = cc -ggdb
 # -std=c99
 INC = -I.
 LIB = $(wildcard src/*.h src/stb_ds.h)
@@ -6,10 +6,13 @@ SRC = $(wildcard src/*.c)
 OBJ = $(patsubst %.c,$(OBJ_DIR)/%.o,$(SRC))
 OBJ_DIR = ./objs
 BUILD_DIR = ./build
-OUT = vspli
+OUT = $(BUILD_DIR)/vspli
+
+test: $(OUT)
+	./$(OUT) ./examples/test.vspl
 
 $(OUT): $(OBJ) $(OBJ_DIR) $(BUILD_DIR) wc.md
-	$(CC) $(OBJ) $(INC) -o $(BUILD_DIR)/$(OUT)
+	$(CC) $(OBJ) $(INC) -o $(OUT)
 
 wc.md: $(SRC) $(LIB)
 	cloc `find src -name "*.c" -o -name "*.h" -a ! -name "stb_ds.h"` --hide-rate --md > wc.md
@@ -31,4 +34,4 @@ install: $(OUT)
 	chmod +x ~/.local/bin/$(OUT)
 
 src/stb_ds.h:
-	wget https://raw.githubusercontent.com/nothings/stb/refs/heads/master/stb_ds.h
+	wget https://raw.githubusercontent.com/nothings/stb/refs/heads/master/stb_ds.h -P./src

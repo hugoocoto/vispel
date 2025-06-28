@@ -46,7 +46,7 @@ main(int argc, char **argv)
                 // print_tokens();
                 tok_parse();
                 // print_ast();
-                // resolve(); /* It does not work */
+                if (resolve()) continue;
                 eval();
                 if (interactive) prompt();
         }

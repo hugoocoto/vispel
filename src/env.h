@@ -43,7 +43,7 @@ int env_get_offset(char *name);
 
 /* Access by Expr */
 // in resolver.c
-Value env_get_expr(Expr* e, char *name);
-Value env_set_expr(Expr* e, char *name, Value value);
+Value env_get_l(void* e, char *name);
+Value env_set_l(void* e, char *name, Value value);
 
 #endif // !ENV_H

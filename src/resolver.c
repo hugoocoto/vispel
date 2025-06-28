@@ -8,20 +8,25 @@
 
 jmp_buf resolve_error_jmp;
 
+#define DECLARED ((Value) { .type = TYPE_NUM, .num = 1 })
+#define DEFINED ((Value) { .type = TYPE_NUM, .num = 3 })
+#define UNDEFINED ((Value) { .type = TYPE_NUM, .num = 0 })
+
+
+/* Raise an error if function is not implemented */
+#define TODO()                                           \
+        do {                                             \
+                report("No yet implemented: %s at %d\n", \
+                       __FUNCTION__, __LINE__);          \
+                resolve_error();                         \
+        } while (0)
+
+
 /* Hashmap Expr * -> int (num of jumps to env that contains definition) */
 struct {
-        Expr *key;
+        void *key;
         int value;
 } *sidetable = NULL;
-
-/* Hashmap that store variable status */
-struct {
-        char *key;
-        enum { UNDECLARED = 0,
-               DECLARED = 1,
-               DEFINED = 3,
-        } value;
-} *varstatus = NULL;
 
 static void
 resolve_error()
@@ -30,161 +35,83 @@ resolve_error()
 }
 
 static void
-change_status(char *name, int type)
+sidetable_add_expr(Expr *e)
 {
-        switch (type) {
-        case DEFINED:
-        case DECLARED:
-        case UNDECLARED:
-                break;
-        default:
-                report("Invalid type in change_status\n");
-                resolve_error();
-                break;
-        }
-        shput(varstatus, name, type);
-}
-
-static int
-get_status(char *name)
-{
-        int i = shgeti(varstatus, name);
-        if (i < 0) return UNDECLARED;
-        return varstatus[i].value;
-}
-
-static void
-sidetable_add(Expr *e)
-{
-        switch (e->type) {
-        case VAREXPR:
-                hmput(sidetable, e, env_get_offset(e->varexpr.name->str_literal));
-                break;
-        default:
-                report("No yet implemented: sidetable_add for %s\n",
-                       EXPR_REPR[e->type]);
-                resolve_error();
-        }
-}
-
-static int
-sidetable_get(Expr *e)
-{
-        int i;
+        LOG("sidetable_add_expr(%p)\n", e);
         switch (e->type) {
         case LITEXPR:
                 if (e->litexpr.value->token != IDENTIFIER) {
-                        report("Var is not an identifier\n");
+                        report("sidetable_add_expr case LITEXPR for literal not identifier: error\n");
                         resolve_error();
                 }
-                i = hmgeti(sidetable, e);
-                if (i < 0) {
-                        if (get_status(e->litexpr.value->str_literal) & DEFINED)
-                                return 0; // core functions
-                        report("[sidetable] Var `%s` not defined\n",
-                               e->litexpr.value->str_literal);
-                        resolve_error();
-                }
+                hmput(sidetable, e, env_get_offset(e->litexpr.value->str_literal));
                 break;
-
         case ASSIGNEXPR:
-                i = hmgeti(sidetable, e);
-                if (i < 0) {
-                        report("[sidetable] Var `%s` not defined\n",
-                               e->assignexpr.name->str_literal);
-                        resolve_error();
-                }
+                hmput(sidetable, e, env_get_offset(e->assignexpr.name->str_literal));
                 break;
-
         default:
-                report("No yet implemented: sidetable_get for %s\n",
+                report("No yet implemented: sidetable_add_expr for %s\n",
                        EXPR_REPR[e->type]);
                 resolve_error();
         }
+}
+
+static void
+sidetable_add_stmt(Stmt *s)
+{
+        LOG("sidetable_add_stmt(%p)\n", s);
+        // hmput(sidetable, s, env_get_offset(s->vardecl.name->str_literal));
+        switch (s->type) {
+        default:
+                report("No yet implemented: sidetable_add_stmt for %s\n",
+                       STMT_REPR[s->type]);
+                resolve_error();
+        }
+}
+
+static int
+sidetable_get(void *e)
+{
+        int i;
+        i = hmgeti(sidetable, e);
+        if (i < 0) {
+                report("Can not resolve %p\n", e);
+                resolve_error();
+        }
+        LOG("sidetable_get(%p) = %d\n", e, sidetable[i].value);
         return sidetable[i].value;
 }
 
 static void
 define_core()
 {
-        Env *env = get_current_env();
-        int len = hmlenu(env->map);
-        int i;
-        for (i = 0; i < len; i++) {
-                change_status(env->map[i].key, DEFINED);
-                printf("[STATUS] var %s : DEFINED\n", env->map[i].key);
-        }
-}
-
-static void
-check_defined(Expr *e)
-{
-        switch (e->type) {
-        case CALLEXPR:
-                check_defined(e->callexpr.name);
-                Expr *a = e->callexpr.args;
-                while (a) {
-                        check_defined(a);
-                        a = a->next;
-                }
-                break;
-
-        case LITEXPR:
-                if (e->litexpr.value->token != IDENTIFIER) return;
-                if (!(get_status(e->litexpr.value->str_literal) & DEFINED)) {
-                        report("Var `%s` is not defined\n",
-                               e->litexpr.value->str_literal);
-                        resolve_error();
-                }
-                break;
-
-        default:
-                report("No yet implemented: check_defined for %s\n",
-                       EXPR_REPR[e->type]);
-                resolve_error();
-                break;
-        }
-}
-
-static void
-check_declared(Expr *e)
-{
-        switch (e->type) {
-        default:
-                report("No yet implemented: check_declared for %s\n",
-                       EXPR_REPR[e->type]);
-                resolve_error();
-                break;
-        }
+        TODO();
 }
 
 static void
 define(char *name)
 {
-        change_status(name, DEFINED);
+        env_add(name, DEFINED);
+}
+
+static void
+declare(char *name)
+{
+        env_add(name, DECLARED);
+}
+
+static void
+check_declared(char *name)
+{
+        if (env_get(name).num & DECLARED.num) return;
+        report("check_declared: var `%s` not declared\n", name);
+        resolve_error();
 }
 
 static void
 resolve_declaration(Stmt *s)
 {
         switch (s->type) {
-        case VARDECLSTMT:
-                if (s->vardecl.value)
-                        change_status(s->vardecl.name->str_literal, DEFINED);
-                else
-                        change_status(s->vardecl.name->str_literal, DECLARED);
-                define(s->vardecl.name->str_literal);
-                break;
-        case FUNDECLSTMT:
-                change_status(s->funcdecl.name->str_literal, DEFINED);
-                define(s->funcdecl.name->str_literal);
-                vtok *a = s->funcdecl.params;
-                while (a) {
-                        define(a->str_literal);
-                        a = a->next;
-                }
-                printf("[STATUS] var %s : DEFINED\n", s->vardecl.name->str_literal);
-                break;
         default:
                 report("No yet implemented: resolve_declaration for %s\n",
                        STMT_REPR[s->type]);
@@ -199,6 +126,19 @@ static void
 resolve_expr(Expr *e)
 {
         switch (e->type) {
+        case LITEXPR:
+                if (e->litexpr.value->token != IDENTIFIER) return;
+                sidetable_add_expr(e);
+                break;
+        case CALLEXPR:
+                resolve_expr_arr(e->callexpr.args);
+                resolve_expr(e->callexpr.name);
+                break;
+        case ASSIGNEXPR:
+                check_declared(e->assignexpr.name->str_literal);
+                sidetable_add_expr(e);
+                resolve_expr(e->assignexpr.value);
+                break;
         case BINEXPR:
                 resolve_expr(e->binexpr.lhs);
                 resolve_expr(e->binexpr.rhs);
@@ -206,26 +146,14 @@ resolve_expr(Expr *e)
         case UNEXPR:
                 resolve_expr(e->unexpr.rhs);
                 break;
-        case ANDEXPR:
-                resolve_expr(e->andexpr.lhs);
-                resolve_expr(e->andexpr.rhs);
-                break;
         case OREXPR:
                 resolve_expr(e->orexpr.lhs);
                 resolve_expr(e->orexpr.rhs);
                 break;
-        case LITEXPR:
+        case ANDEXPR:
+                resolve_expr(e->andexpr.lhs);
+                resolve_expr(e->andexpr.rhs);
                 break;
-        case ASSIGNEXPR:
-                define(e->assignexpr.name->str_literal);
-                resolve_expr(e->assignexpr.value);
-                break;
-        case CALLEXPR:
-                check_defined(e);
-                resolve_expr_arr(e->callexpr.args);
-                resolve_expr(e->callexpr.name);
-                break;
-        case VAREXPR:
         default:
                 report("No yet implemented: resolve_expr for %s\n",
                        EXPR_REPR[e->type]);
@@ -248,40 +176,49 @@ static void
 resolve_stmt(Stmt *s)
 {
         switch (s->type) {
+        case VARDECLSTMT:
+                resolve_expr_arr(s->vardecl.value);
+                if (s->vardecl.value)
+                        declare(s->vardecl.name->str_literal);
+                else
+                        define(s->vardecl.name->str_literal);
+                break;
+        case FUNDECLSTMT:
+                define(s->funcdecl.name->str_literal);
+                env_create();
+                for (vtok *arg = s->funcdecl.params; arg; arg = arg->next) {
+                        declare(arg->str_literal);
+                }
+                resolve_stmt_arr(s->funcdecl.body);
+                env_destroy();
+                break;
         case BLOCKSTMT:
+                env_create();
                 resolve_stmt_arr(s->block.body);
+                env_destroy();
                 break;
         case EXPRSTMT:
-                resolve_expr(s->expr.body);
+                resolve_expr_arr(s->expr.body);
                 break;
         case ASSERTSTMT:
-                resolve_expr(s->assert.body);
-                break;
-        case RETSTMT:
-                resolve_expr(s->retstmt.value);
+                resolve_expr_arr(s->assert.body);
                 break;
         case IFSTMT:
                 resolve_expr(s->ifstmt.cond);
                 resolve_stmt(s->ifstmt.body);
-                resolve_stmt(s->ifstmt.elsebody);
+                if (s->ifstmt.elsebody)
+                        resolve_stmt(s->ifstmt.elsebody);
                 break;
         case WHILESTMT:
                 resolve_expr(s->whilestmt.cond);
                 resolve_stmt(s->whilestmt.body);
                 break;
-        case VARDECLSTMT:
-                /* Expr before declaration to check for "var a = a;" */
-                resolve_expr(s->vardecl.value);
-                resolve_declaration(s);
+        case RETSTMT:
+                resolve_expr(s->retstmt.value);
                 break;
-        case FUNDECLSTMT:
-                /* declaration before body to allow recursion */
-                resolve_declaration(s);
-                resolve_stmt_arr(s->funcdecl.body);
-                break;
-
         default:
-                report("No yet implemented: resolve_stmt for %s\n", s->type);
+                report("No yet implemented: resolve_stmt for %s\n",
+                       STMT_REPR[s->type]);
                 resolve_error();
                 break;
         }
@@ -296,26 +233,30 @@ resolve_stmt_arr(Stmt *s)
         }
 }
 
-void
+int
 resolve()
 {
-        if (setjmp(resolve_error_jmp)) {
-                return;
+        Env *prev = env_create_e(NULL);
+        load_core_lib();
+        if (setjmp(resolve_error_jmp) | setjmp(eval_runtime_error)) {
+                return 1;
         }
-        define_core();
+        // TODO: define_core();
         resolve_stmt_arr(head_stmt);
+        env_destroy_e(prev);
+        return 0;
 }
 
 Value
-env_get_expr(Expr *e, char *name)
+env_get_l(void *e, char *name)
 {
-        return env_get(name);
+        LOG("env_get_l(%p, %s)\n", e, name);
         return env_get_o(sidetable_get(e), name);
 }
 
 Value
-env_set_expr(Expr *e, char *name, Value value)
+env_set_l(void *e, char *name, Value value)
 {
-        return env_set(name, value);
+        LOG("env_get_l(%p, %s, value)\n", e, name);
         return env_set_o(sidetable_get(e), name, value);
 }
