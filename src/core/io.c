@@ -31,8 +31,8 @@ core_input(Expr *_)
         return NO_VALUE;
 }
 
-__attribute__((constructor)) void
-load_core_io()
+static __attribute__((constructor)) void
+__init__()
 {
         preload("print", core_print, 1);
         preload("input", core_input, 0);

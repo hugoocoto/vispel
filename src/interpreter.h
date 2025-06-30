@@ -11,6 +11,7 @@ struct ValueNode;
 typedef enum Valtype {
         TYPE_NUM,
         TYPE_STR,
+        TYPE_ADDR,
         TYPE_NONE,
         TYPE_CALLABLE,
         TYPE_CORE_CALL,
@@ -19,6 +20,7 @@ typedef enum Valtype {
 static const char *VALTYPE_REPR[] = {
         [TYPE_NUM] = "NUMBER",
         [TYPE_STR] = "STRING",
+        [TYPE_ADDR] = "MEMORY ADDRESS",
         [TYPE_NONE] = "NONE",
         [TYPE_CALLABLE] = "CALLABLE",
         [TYPE_CORE_CALL] = "CORE CALL",
@@ -30,6 +32,7 @@ typedef struct Value {
         union {
                 int num;
                 char *str;
+                void *addr; // reserve for core functions
                 struct {
                         int arity;
                         vtok *params;
