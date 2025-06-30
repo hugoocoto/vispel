@@ -4,13 +4,14 @@
 #include "tokens.h"
 #include <setjmp.h>
 
-#define NO_VALUE ((Value) { .type = TYPE_STR, .str = "no-value" })
+#define NO_VALUE ((Value) { .type = TYPE_NONE })
 
 struct ValueNode;
 
 typedef enum Valtype {
         TYPE_NUM,
         TYPE_STR,
+        TYPE_NONE,
         TYPE_CALLABLE,
         TYPE_CORE_CALL,
 } Valtype;
@@ -18,6 +19,7 @@ typedef enum Valtype {
 static const char *VALTYPE_REPR[] = {
         [TYPE_NUM] = "NUMBER",
         [TYPE_STR] = "STRING",
+        [TYPE_NONE] = "NONE",
         [TYPE_CALLABLE] = "CALLABLE",
         [TYPE_CORE_CALL] = "CORE CALL",
 };

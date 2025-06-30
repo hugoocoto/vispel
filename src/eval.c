@@ -27,7 +27,6 @@ runtime_error()
         longjmp(eval_runtime_error, 1);
 }
 
-
 void
 print_val(Value v)
 {
@@ -36,10 +35,9 @@ print_val(Value v)
                 printf("%d\n", v.num);
                 break;
         case TYPE_STR:
-                /* -- TEMP -- */
-                if (strcmp("no-value", v.str) == 0) return;
-                /* ---------- */
                 printf("%s\n", v.str);
+                break;
+        case TYPE_NONE:
                 break;
         default:
                 report("No yet implemented: print_val for %s\n",
@@ -378,7 +376,6 @@ eval_callexpr(Expr *e)
                 }
         }
 
-
         switch (func.type) {
         case TYPE_CALLABLE:
                 prev = env_change_upper(func.call.closure);
@@ -392,7 +389,6 @@ eval_callexpr(Expr *e)
                 memcpy(ret_env, prev_ret_env, sizeof ret_env);
                 env_destroy_e(prev);
                 break;
-
         case TYPE_CORE_CALL:
                 ret = func.call.ifunc(e->callexpr.args);
                 env_destroy();

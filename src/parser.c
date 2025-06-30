@@ -71,17 +71,32 @@ print_ast_expr_branch(Expr *e)
                 printf("%*s", indent * indent_size, "");
                 printf("- [CALL] name: ");
                 print_ast_expr_branch(e->callexpr.name);
-                // vtok *ex = e->callexpr.args;
-                // while (ex) {
-                //         printf("%*s", indent * indent_size, "");
-                //         printf("- [Param] %s\n", ex->str_literal);
-                //         ex = ex->next;
-                // }
-                printf("\n");
+                Expr *ex = e->callexpr.args;
+                while (ex) {
+                        printf("%*s", indent * indent_size, "");
+                        printf("- [Param] ");
+                        print_ast_expr_branch(ex);
+                        ex = ex->next;
+                }
                 break;
-        case VAREXPR:
         case ANDEXPR:
+                printf("- [AND]\n");
+                printf("%*s", indent * indent_size, "");
+                printf("  - [lhs] ");
+                print_ast_expr_branch(e->andexpr.lhs);
+                printf("%*s", indent * indent_size, "");
+                printf("  - [rhs] ");
+                print_ast_expr_branch(e->andexpr.rhs);
+                break;
         case OREXPR:
+                printf("- [OR]\n");
+                printf("%*s", indent * indent_size, "");
+                printf("  - [lhs] ");
+                print_ast_expr_branch(e->orexpr.lhs);
+                printf("%*s", indent * indent_size, "");
+                printf("  - [rhs] ");
+                print_ast_expr_branch(e->orexpr.rhs);
+                break;
         default:
                 report("print_ast_expr_branch not yet implemeted for %s\n",
                        EXPR_REPR[e->type]);
@@ -124,6 +139,10 @@ print_ast_branch(Stmt *s)
                         s = s->next;
                 }
                 printf("\n");
+                break;
+        case RETSTMT:
+                printf("return: ");
+                print_ast_expr_branch(s->retstmt.value);
                 break;
         case WHILESTMT:
                 printf("while ");
