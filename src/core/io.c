@@ -18,6 +18,14 @@ core_print(Expr *args)
 }
 
 Value
+core_print_ln(Expr *args)
+{
+        print_val(eval_expr(args));
+        printf("\n");
+        return NO_VALUE;
+}
+
+Value
 core_input(Expr *_)
 {
         char buf[1024];
@@ -35,5 +43,6 @@ static __attribute__((constructor)) void
 __init__()
 {
         preload("print", core_print, 1);
+        preload("println", core_print_ln, 1);
         preload("input", core_input, 0);
 }

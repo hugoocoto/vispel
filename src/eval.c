@@ -32,10 +32,10 @@ print_val(Value v)
 {
         switch (v.type) {
         case TYPE_NUM:
-                printf("%d\n", v.num);
+                printf("%d", v.num);
                 break;
         case TYPE_STR:
-                printf("%s\n", v.str);
+                printf("%s", v.str);
                 break;
         case TYPE_NONE:
                 break;
@@ -347,7 +347,16 @@ eval_callexpr(Expr *e)
                 report("Calling a non callable expression\n");
                 runtime_error();
         }
-        if (e->callexpr.count != func.call.arity) {
+
+        if (func.call.arity & VAARGS) {
+                if (e->callexpr.count < (func.call.arity & ~VAARGS)) {
+                        report("Function `%s` expect at least %b arguments, "
+                               "but got %b\n",
+                               func.call.name, (func.call.arity & ~VAARGS),
+                               e->callexpr.count);
+                        runtime_error();
+                }
+        } else if (e->callexpr.count != func.call.arity) {
                 report("Function `%s` expect %d arguments, but got %d\n",
                        func.call.name, func.call.arity, e->callexpr.count);
                 runtime_error();
@@ -529,4 +538,5 @@ eval()
                 return;
         }
         print_val(eval_stmt_arr(head_stmt));
+        printf("\n");
 }

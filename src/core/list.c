@@ -6,6 +6,7 @@
  * */
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h> // alloc
 #include <string.h> // memmove
 
@@ -33,6 +34,21 @@ get_values(Expr *e)
         }
         return v;
 }
+
+Value *
+get_values_n(Expr *e, int *n)
+{
+        Value *v = NULL;
+        *n = 0;
+        while (e) {
+                v = realloc(v, sizeof *v * (*n + 1));
+                v[*n] = eval_expr(e);
+                e = e->next;
+                (*n)++;
+        }
+        return v;
+}
+
 
 static void
 check_valid_list(Value l)
@@ -231,13 +247,16 @@ core_list_get(Expr *e)
         })
 
 Value
-core_list_init(Expr *_)
+core_list_init(Expr *e)
 {
-        List l = calloc(1, sizeof *l);
-        return (Value) {
-                .addr = da_init(l),
-                .type = TYPE_ADDR,
-        };
+        List l = da_init((List) calloc(1, sizeof *l));
+        int n;
+        Value *v = get_values_n(e, &n);
+
+        for (int i = 0; i < n; i++)
+                da_append(l, v[i]);
+
+        return (Value) { .addr = l, .type = TYPE_ADDR };
 }
 
 static __attribute__((constructor)) void
@@ -249,5 +268,5 @@ __init__()
         preload("destroy", core_list_destroy, 1);
         preload("length", core_list_size, 1);
         preload("get", core_list_get, 2);
-        preload("list", core_list_init, 0);
+        preload("list", core_list_init, 0 | VAARGS); // 0 or more arguments
 }

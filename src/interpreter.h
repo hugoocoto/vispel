@@ -4,6 +4,8 @@
 #include "tokens.h"
 #include <setjmp.h>
 
+#define VAARGS (1 << ((sizeof(int) * 8) - 1))
+
 #define NO_VALUE ((Value) { .type = TYPE_NONE })
 
 struct ValueNode;
