@@ -367,6 +367,41 @@ expect_consume(vtoktype expected)
         consume_token();
 }
 
+/* Convert the literal string into a valid string. Eg: expand '\' */
+static void
+normalize(vtok *t)
+{
+        char *c = t->str_literal;
+        static const char escape_lookup[] = {
+                ['a'] = '\a',
+                ['b'] = '\b',
+                ['t'] = '\t',
+                ['n'] = '\n',
+                ['v'] = '\v',
+                ['f'] = '\f',
+                ['r'] = '\r',
+        };
+
+        while (*c && (c = strchr(c, '\\'))) {
+                switch (c[1]) {
+                case 'a':
+                case 'b':
+                case 't':
+                case 'n':
+                case 'v':
+                case 'f':
+                case 'r':
+                        *c = escape_lookup[c[1]];
+                        break;
+                default:
+                        *c = c[1];
+                        break;
+                }
+                if (c[1]) strcpy(c + 1, c + 2);
+                c++;
+        }
+}
+
 static void
 link_stmt(Stmt *s)
 {
@@ -398,6 +433,7 @@ get_literal()
 {
         vtok *t;
         if ((t = is_literal())) {
+                if (t->token == STRING) normalize(t);
                 return new_litexpr(t);
         }
         /* can't be used expect() because LITERAL is an expression, not a token */

@@ -17,6 +17,7 @@ func print_gen(gen) {
         else print(" ");
         i = i + 1;
     }
+    // print("\n"); both are the same
     println("");
 }
 

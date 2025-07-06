@@ -135,8 +135,8 @@ static const char *TOKEN_REPR[] = {
 };
 
 typedef struct vtok {
-        vtoktype token;
         const char *lexeme;
+        vtoktype token;
         union {
                 int num_literal;
                 char *str_literal;
