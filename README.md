@@ -9,9 +9,10 @@ another useless language.
 var c = 2;
 func f(a) {
     a = a + c;
-    print(a);
+    println(a);
 }
-f(3); // 5
+print("f(3) = ");
+f(3);
 ```
 
 ## Compiler
@@ -34,11 +35,11 @@ make
 ```
 
 ## Line Count
-Just to say *hey, yo! 2k line compiler!*.
+Just to say that I wrote a *2k line compiler!*.
 [here](./wc.md)
 
 ## Turing Completeness
-As I'm able to implement a cellular automaton,
-[rule110](https://en.wikipedia.org/wiki/Rule_110), that is known to be [turing
-complete](https://en.wikipedia.org/wiki/Turing_completeness), I can say that
-vspl is turing complete.
+As I was able to implement a cellular automaton,
+[rule110](https://en.wikipedia.org/wiki/Rule_110), that is known for being
+[turing complete](https://en.wikipedia.org/wiki/Turing_completeness), I can say
+that vspl is turing complete.
