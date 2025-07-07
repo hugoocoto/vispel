@@ -47,8 +47,7 @@ main(int argc, char **argv)
                 // print_tokens();
                 tok_parse();
                 // print_ast();
-                if (resolve()) continue;
-                eval();
+                if (resolve() == 0) eval();
                 if (interactive) prompt();
         }
         env_destroy();
