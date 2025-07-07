@@ -3,10 +3,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "core/core.h"
 #include "env.h"
 #include "interpreter.h"
 #include "tokens.h"
-#include "core/core.h"
 
 #define PROMPT "[vispel] >> "
 

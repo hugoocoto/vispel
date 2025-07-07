@@ -3,7 +3,6 @@
 #include "env.h"
 #include "interpreter.h"
 #include "tokens.h"
-#include "core/core.h"
 
 #include "stb_ds.h"
 
@@ -214,11 +213,26 @@ resolve_stmt_arr(Stmt *s)
         }
 }
 
+void
+load_env_data(Env *env)
+{
+        int i = 0;
+        int len = shlenu(env->map);
+        for (; i < len; i++) {
+                if (env->map[i].value.type != TYPE_NONE)
+                        define(env->map[i].key);
+                else
+                        declare(env->map[i].key);
+        }
+
+        if (env->upper) load_env_data(env->upper);
+}
+
 int
 resolve()
 {
         Env *prev = env_create_e(NULL);
-        load_core_lib();
+        load_env_data(prev);
         if (setjmp(resolve_error_jmp) | setjmp(eval_runtime_error)) {
                 return 1;
         }

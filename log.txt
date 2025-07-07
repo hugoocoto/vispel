@@ -1,0 +1,6 @@
+Expected SEMICOLON but got DOT at line 1, offset 2
+env_get_offset: Var `a` not declared
+env_get_e: var `a` not declared
+Can not resolve 0x61a4e23eb870
+Can not resolve 0x615ffee43680
+Var `list` already declared

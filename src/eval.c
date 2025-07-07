@@ -27,6 +27,24 @@ runtime_error()
         longjmp(eval_runtime_error, 1);
 }
 
+/* Todo: use this instead of print_val and printf newline */
+void
+print_valnl(Value v)
+{
+        switch (v.type) {
+        case TYPE_NUM:
+        case TYPE_STR:
+        case TYPE_NONE:
+                print_val(v);
+                printf("\n");
+                break;
+        default:
+                report("No yet implemented: print_val for %s\n",
+                       VALTYPE_REPR[v.type]);
+                runtime_error();
+        }
+}
+
 void
 print_val(Value v)
 {
