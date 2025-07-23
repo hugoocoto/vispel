@@ -183,6 +183,97 @@ print_ast()
         printf("---------------------------\n");
 }
 
+static void
+free_exprs(Expr *e)
+{
+        Expr *current = e;
+        while (current) {
+                Expr *next = current->next;
+                switch (current->type) {
+                case ASSIGNEXPR:
+                        free_exprs(current->assignexpr.value);
+                        break;
+                case BINEXPR:
+                        free_exprs(current->binexpr.lhs);
+                        free_exprs(current->binexpr.rhs);
+                        break;
+                case UNEXPR:
+                        free_exprs(current->unexpr.rhs);
+                        break;
+                case CALLEXPR:
+                        free_exprs(current->callexpr.name);
+                        free_exprs(current->callexpr.args);
+                        break;
+                case LITEXPR:
+                        break;
+                case VAREXPR:
+                        free_exprs(current->varexpr.value);
+                        break;
+                case OREXPR:
+                        free_exprs(current->orexpr.lhs);
+                        free_exprs(current->orexpr.rhs);
+                        break;
+                case ANDEXPR:
+                        free_exprs(current->andexpr.lhs);
+                        free_exprs(current->andexpr.rhs);
+                        break;
+                        break;
+                }
+                free(current);
+                current = next;
+        }
+}
+
+static void
+free_stmts(Stmt *s)
+{
+        Stmt *current = s;
+        while (current) {
+                Stmt *next = current->next;
+                switch (current->type) {
+                case VARDECLSTMT:
+                        free_exprs(current->vardecl.value);
+                        break;
+                case BLOCKSTMT:
+                        free_stmts(current->block.body);
+                        break;
+                case EXPRSTMT:
+                        free_exprs(current->expr.body);
+                        break;
+                case ASSERTSTMT:
+                        free_exprs(current->assert.body);
+                        break;
+                case RETSTMT:
+                        free_exprs(current->retstmt.value);
+                        break;
+                case IFSTMT:
+                        free_exprs(current->ifstmt.cond);
+                        free_stmts(current->ifstmt.body);
+                        free_stmts(current->ifstmt.elsebody);
+                        break;
+                case WHILESTMT:
+                        free_exprs(current->whilestmt.cond);
+                        free_stmts(current->whilestmt.body);
+                        break;
+                case FUNDECLSTMT:
+                        free_stmts(current->funcdecl.body);
+                        break;
+                default:
+                        report("free_stmts not yet implemeted for %s\n",
+                               STMT_REPR[current->type]);
+                        panik_exit();
+                }
+                free(current);
+                current = next;
+        }
+}
+
+void
+free_stmt_head()
+{
+        free_stmts(head_stmt);
+}
+
 /* Use only to create a expr of a concrete type */
 static Expr *
 new_expr()

@@ -75,6 +75,17 @@ print_tokens()
         }
 }
 
+void
+free_tokens()
+{
+        vtok *current = head_token;
+        while (current) {
+                vtok *next = current->next;
+                free(current);
+                current = next;
+        }
+}
+
 static vtok *
 new_token(vtoktype token)
 {

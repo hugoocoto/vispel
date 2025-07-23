@@ -1,6 +1,6 @@
-CC = cc -ggdb -std=gnu99
+CC = cc -fsanitize=address,null -std=gnu99
 INC = -I.
-LIB = $(wildcard src/*.h src/stb_ds.h src/core/*.h)
+LIB = $(wildcard src/*.h src/core/*.h) src/stb_ds.h
 SRC = $(wildcard src/*.c src/core/*.c)
 OBJ = $(patsubst %.c,$(OBJ_DIR)/%.o,$(SRC))
 OBJ_DIR = ./objs
@@ -10,7 +10,7 @@ OUT = $(BUILD_DIR)/vspli
 test: $(OUT)
 	./$(OUT) ./examples/test.vspl
 
-$(OUT): $(OBJ) $(OBJ_DIR) $(BUILD_DIR) wc.md
+$(OUT): $(LIB) $(OBJ) $(OBJ_DIR) $(BUILD_DIR) wc.md
 	$(CC) $(OBJ) $(INC) -o $(OUT)
 
 wc.md: $(SRC) $(LIB)
@@ -31,6 +31,7 @@ clean:
 install: $(OUT)
 	mv $(OUT) ~/.local/bin/$(OUT)
 	chmod +x ~/.local/bin/$(OUT)
+
 
 src/stb_ds.h:
 	wget https://raw.githubusercontent.com/nothings/stb/refs/heads/master/stb_ds.h -P./src

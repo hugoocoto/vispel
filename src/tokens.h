@@ -232,12 +232,12 @@ extern Stmt *head_stmt;
 /* ./lexer.c */
 void lex_analize(char *source);
 void print_tokens();
-
-// needed in parser
+void free_tokens();
 void print_literal(vtok *tok);
 
 /* ./parser.c */
 void tok_parse();
 void print_ast();
+void free_stmt_head();
 
 #endif

@@ -51,6 +51,9 @@ main(int argc, char **argv)
                 if (interactive) prompt();
         }
         env_destroy();
+        free_tokens();
+        free_stmt_head();
+        
         if (n < 0) {
                 report("Can not read\n");
                 return -1;
