@@ -43,3 +43,6 @@ As I was able to implement a cellular automaton,
 [rule110](https://en.wikipedia.org/wiki/Rule_110), that is known for being
 [turing complete](https://en.wikipedia.org/wiki/Turing_completeness), I can say
 that vspl is turing complete.
+
+# I know 
+I know I don't free a single byte, I would fix this some day. 
